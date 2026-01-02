@@ -124,6 +124,11 @@
         }
 
         /* when panel open, it overlays map; map stays full-size so no shift */
+
+        /* custom div icon: image + label */
+        .custom-div-icon{ background: transparent; border: none; }
+        .custom-div-icon img{ width:32px; height:32px; display:block; margin:0 auto; }
+        .marker-label{ text-align:center; font-size:12px; color:#fff; line-height:1; margin-top:2px; white-space:nowrap; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
     </style>
 </head>
 
@@ -265,7 +270,17 @@
                 function monthIndexOf(value){ if(!value) return null; if(typeof value==='string'){ const m=value.match(/^(\d{4})-(\d{2})$/); if(m){ const y=parseInt(m[1],10); const mm=parseInt(m[2],10); return y*12+(mm-1);} } const d=(value instanceof Date)?value:parseDateSafe(value); if(!d) return null; return d.getFullYear()*12 + d.getMonth(); }
                 function monthIndexToYYYYMM(mi){ if(mi==null) return ''; const y=Math.floor(mi/12); const m=(mi%12)+1; return `${y}-${String(m).padStart(2, '0')}`; }
                 function clearMarkers(){markers.forEach(m => { if (m.leaflet) map.removeLayer(m.leaflet); }); markers=[]; }
-                function makeIcon(url){ if(!url) url='images/ingress.png'; try{ return L.icon({iconUrl:url,iconSize:[32,32],iconAnchor:[16,32],popupAnchor:[0,-32]}); }catch(e){return null} }
+                function makeIcon(url, title){
+                    if(!url) url='images/ingress.png';
+                    try{
+                        const safeUrl = escapeAttr(url);
+                        const safeTitle = escapeHtml(title || '');
+                        const html = `<div><img src="${safeUrl}" alt="" /><div class="marker-label">${safeTitle}</div></div>`;
+                        return L.divIcon({ html, className: 'custom-div-icon', iconSize: [32, 44], iconAnchor: [16, 32], popupAnchor: [0, -32] });
+                    }catch(e){
+                        return null;
+                    }
+                }
 
                 function render(){
                     clearMarkers();
@@ -288,7 +303,18 @@
       visible.sort((a,b)=>{ const am=a.evMonth!=null?a.evMonth:(a.date?monthIndexOf(a.date):0); const bm=b.evMonth!=null?b.evMonth:(b.date?monthIndexOf(b.date):0); if(am!==bm) return am-bm; const at=a.date?a.date.getTime():0; const bt=b.date?b.date.getTime():0; return at-bt; });
       visible.forEach(item=>{
         const ev=item.ev, title=item.title, date=item.date, dateRaw=item.dateRaw, typeVal=item.typeVal;
-                let iconUrl=null; const tv=typeVal.toLowerCase(); if(tv.includes('first saturday')||tv.includes('vfs')) iconUrl='images/fs.png'; else if(tv.includes('mission day')||tv.includes('missionday')) iconUrl='images/md.png'; else iconUrl=getField(ev,'customicon')||getField(ev,'icon')||null; if(!iconUrl) iconUrl='images/ingress.png';
+                // marker column takes precedence: images/${marker}
+                let iconUrl = null;
+                const markerCol = (getField(ev, 'marker') || '').toString().trim();
+                if (markerCol) {
+                    iconUrl = 'images/' + markerCol;
+                } else {
+                    const tv = typeVal.toLowerCase();
+                    if (tv.includes('first saturday') || tv.includes('vfs')) iconUrl = 'images/fs.png';
+                    else if (tv.includes('mission day') || tv.includes('missionday')) iconUrl = 'images/md.png';
+                    else iconUrl = getField(ev, 'customicon') || getField(ev, 'icon') || null;
+                    if (!iconUrl) iconUrl = 'images/ingress.png';
+                }
                 const lat=parseFloat((getField(ev,'lat')||getField(ev,'latitude')||getField(ev,'y')||'').toString().replace(/\s+/g,''));
                 const lng=parseFloat((getField(ev,'lng')||getField(ev,'longitude')||getField(ev,'x')||'').toString().replace(/\s+/g,''));
                 const row=document.createElement('div');
@@ -301,7 +327,16 @@
                 if(iconUrl){ const img=document.createElement('img'); img.src=iconUrl; img.alt=''; img.style.width='20px'; img.style.height='20px'; img.style.objectFit='contain'; img.style.marginLeft='8px'; row.appendChild(img); }
                 row.appendChild(label);
                 list.appendChild(row);
-                let leafletMarker=null; if(!isNaN(lat)&&!isNaN(lng)){ const icon=makeIcon(iconUrl); leafletMarker=L.marker([lat,lng], icon?{icon}:{ }).addTo(map); const popupHtml=`<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev,'url')||getField(ev,'URL')||'')}" target="_blank">詳細</a></div></div>`; leafletMarker.bindPopup(popupHtml);} markers.push({leaflet:leafletMarker,data:ev,checkbox:cb}); cb.addEventListener('change',()=>{ if(leafletMarker){ if(cb.checked) map.addLayer(leafletMarker); else map.removeLayer(leafletMarker); } });
+                let leafletMarker=null;
+                if(!isNaN(lat)&&!isNaN(lng)){
+                    const titleText = getField(ev, 'title') || '';
+                    const icon = makeIcon(iconUrl, titleText);
+                    leafletMarker = L.marker([lat,lng], icon?{icon}:{ }).addTo(map);
+                    const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev,'url')||getField(ev,'URL')||'')}" target="_blank">詳細</a></div></div>`;
+                    leafletMarker.bindPopup(popupHtml, {autoPan: false});
+                }
+                markers.push({leaflet:leafletMarker,data:ev,checkbox:cb});
+                cb.addEventListener('change',()=>{ if(leafletMarker){ if(cb.checked) map.addLayer(leafletMarker); else map.removeLayer(leafletMarker); } });
       });
     }
 
