@@ -4,365 +4,372 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Ingress Event Map Viewer</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        html,
-        body,
-        #app {
-            height: 100%;
-            margin: 0;
-            font-family: Arial, Helvetica, sans-serif
-        }
+    <!doctype html>
+    <html lang="ja">
 
-        #app {
-            display: flex;
-            flex-direction: row
-        }
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Ingress Event Map Viewer</title>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <style>
+            html,
+            body,
+            #app {
+                height: 100%;
+                margin: 0;
+                font-family: Arial, Helvetica, sans-serif
+            }
 
-        /* Left panel */
-        #panel {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 360px;
-            max-width: 80vw;
-            background: #f7f7f7;
-            border-right: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-            z-index: 1200
-        }
+            #app {
+                display: flex;
+                flex-direction: row
+            }
 
-        #panelHeader {
-            padding: 10px;
-            border-bottom: 1px solid #e1e1e1;
-            display: flex;
-            flex-direction: column;
-            gap: 8px
-        }
+            /* Left panel */
+            #panel {
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 360px;
+                max-width: 80vw;
+                background: #f7f7f7;
+                border-right: 1px solid #ddd;
+                display: flex;
+                flex-direction: column;
+                z-index: 1200
+            }
 
-        #filters {
-            display: flex;
-            gap: 8px
-        }
+            #panelHeader {
+                padding: 10px;
+                border-bottom: 1px solid #e1e1e1;
+                display: flex;
+                flex-direction: column;
+                gap: 8px
+            }
 
-        #filters input[type=text] {
-            flex: 1;
-            padding: 6px
-        }
+            #filters {
+                display: flex;
+                gap: 8px
+            }
 
-        #filters input[type=date] {
-            width: 120px;
-            padding: 6px
-        }
+            #filters input[type=text] {
+                flex: 1;
+                padding: 6px
+            }
 
-        #list {
-            overflow: auto;
-            padding: 8px;
-            flex: 1
-        }
+            #filters input[type=date] {
+                width: 120px;
+                padding: 6px
+            }
 
-        .item {
-            display: flex;
-            align-items: center;
-            padding: 4px;
-            border-bottom: 1px solid #eee
-        }
+            #list {
+                overflow: auto;
+                padding: 8px;
+                flex: 1
+            }
 
-        .item label {
-            margin-left: 8px;
-            flex: 1
-        }
+            .item {
+                display: flex;
+                align-items: center;
+                padding: 4px;
+                border-bottom: 1px solid #eee
+            }
 
-        .item .meta {
-            font-size: 12px;
-            color: #666
-        }
+            .item label {
+                margin-left: 8px;
+                flex: 1
+            }
 
-        /* Map area */
-        #map {
-            flex: 1
-        }
+            .item .meta {
+                font-size: 12px;
+                color: #666
+            }
 
-        #toggleBtn {
-            position: absolute;
-            left: 370px;
-            top: 10px;
-            z-index: 1000
-        }
+            /* Map area */
+            #map {
+                flex: 1
+            }
 
-        .small {
-            font-size: 12px
-        }
+            #openPanelBtn {
+                position: absolute;
+                left: 10px;
+                top: 70px; /* moved down to avoid overlapping Leaflet zoom controls */
+                z-index: 1400;
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2)
+            }
 
-        .controls-row {
-            display: flex;
-            gap: 8px;
-            align-items: center
-        }
+            #map {
+                position: fixed;
+                left: 0;
+                top: 0;
+                right: 0;
+                bottom: 0
+            }
 
-        #openPanelBtn {
-            position: absolute;
-            left: 10px;
-            top: 10px;
-            z-index: 1400;
-            padding: 6px 8px;
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2)
-        }
+            /* custom div icon: image + label */
+            .custom-div-icon {
+                background: transparent;
+                border: none;
+            }
 
-        #map {
-            position: fixed;
-            left: 0;
-            top: 0;
-            right: 0;
-            bottom: 0
-        }
+            .custom-div-icon img {
+                width: 32px;
+                height: 32px;
+                display: block;
+                margin: 0 auto;
+            }
 
-        /* when panel open, it overlays map; map stays full-size so no shift */
+            .marker-label {
+                text-align: center;
+                font-size: 12px;
+                color: #fff;
+                line-height: 1;
+                margin-top: 2px;
+                white-space: nowrap;
+                text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            }
+        </style>
+    </head>
 
-        /* custom div icon: image + label */
-        .custom-div-icon{ background: transparent; border: none; }
-        .custom-div-icon img{ width:32px; height:32px; display:block; margin:0 auto; }
-        .marker-label{ text-align:center; font-size:12px; color:#fff; line-height:1; margin-top:2px; white-space:nowrap; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
-    </style>
-</head>
-
-<body>
-    <div id="app">
-        <div id="panel">
-            <div id="panelHeader">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                    <strong>イベント一覧</strong>
-                    <div>
-                        <button id="checkAllBtn">全チェック</button>
-                        <button id="clearAllBtn">クリア</button>
+    <body>
+        <div id="app">
+            <div id="panel">
+                <div id="panelHeader">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <strong>イベント一覧</strong>
                         <button id="collapseBtn">閉じる</button>
                     </div>
-                </div>
-                <div id="filters" style="display:flex;flex-direction:column;gap:8px">
-                    <div style="display:flex;gap:8px">
-                        <input id="filterText" type="text" placeholder="イベント名で絞り込み" style="flex:1" />
-                        <select id="filterType" class="small">
-                            <option value="">すべて</option>
-                        </select>
-                    </div>
-                    <div style="display:flex;gap:8px">
-                        <input id="fromDate" type="month" style="flex:1" />
-                        <input id="toDate" type="month" style="flex:1" />
-                    </div>
-                </div>
-            </div>
-            <div id="list"></div>
-        </div>
-        <div id="map"></div>
-        <button id="openPanelBtn" style="display:none">メニュー</button>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script>
-        const defaultCsv = 'https://docs.google.com/spreadsheets/d/1sxGS5uA1mGthS9wLm0APub0qzjCiJ0YoSPfsllXXRb0/export?format=csv&gid=165380856';
-        const map = L.map('map').setView([35.68, 139.76], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-
-        let events = [];
-        let markers = [];
-
-        function getField(ev, name) {
-            if (!ev) return undefined;
-            for (const k in ev) { if (k && k.trim().toLowerCase() === target) return ev[k]; }
-            return undefined;
-        }
-
-        function formatDate(d) {
-            if (!d) return '';
-            if (!(d instanceof Date)) d = parseDateSafe(d);
-            if (!d) return '';
-            const y = d.getFullYear();
-            const m = d.getMonth() + 1;
-            const dd = d.getDate();
-            // default to full date when available
-            return `${y}/${m}/${dd}`;
-        }
-
-        function parseDateSafe(s) {
-            if (!s) return null;
-            const d = new Date(s);
-            if (!isNaN(d)) return d;
-            const s2 = s.replace(/\./g, '-').replace(/\//g, '-');
-            const d2 = new Date(s2);
-            if (!isNaN(d2)) return d2;
-            return null;
-        }
-< !doctype html >
-            <html lang="ja">
-                <head>
-                    <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width,initial-scale=1" />
-                    <title>Ingress Event Map Viewer</title>
-                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                    <style>
-                        html,body,#app{height:100%;margin:0;font-family:Arial, Helvetica, sans-serif}
-                        #app{display:flex;flex-direction:row}
-                        /* Left panel */
-                        #panel{width:360px;max-width:80vw;background:#f7f7f7;border-right:1px solid #ddd;display:flex;flex-direction:column}
-                        #panelHeader{padding:10px;border-bottom:1px solid #e1e1e1;display:flex;flex-direction:column;gap:8px}
-                        #filters{display:flex;gap:8px}
-                        #filters input[type=text]{flex:1;padding:6px}
-                        #filters input[type=date]{width:120px;padding:6px}
-                        #list{overflow:auto;padding:8px;flex:1}
-                        .item{display:flex;align-items:flex-start;padding:6px;border-bottom:1px solid #eee}
-                        .item label{margin - left:8px;flex:1}
-                        .item .meta{font - size:12px;color:#666}
-                        /* Map area */
-                        #map{flex:1}
-                        .small{font - size:12px}
-                        #openPanelBtn{position:absolute;left:10px;top:10px;z-index:1200;padding:6px 8px;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.2)}
-                    </style>
-                </head>
-                <body>
-                    <div id="app">
-                        <div id="panel">
-                            <div id="panelHeader">
-                                <div style="display:flex;justify-content:space-between;align-items:center">
-                                    <strong>イベント一覧</strong>
-                                    <button id="collapseBtn">閉じる</button>
-                                </div>
-                                <div id="filters" style="display:flex;flex-direction:column;gap:8px">
-                                    <div style="display:flex;gap:8px">
-                                        <input id="filterText" type="text" placeholder="イベント名で絞り込み" style="flex:1" />
-                                        <select id="filterType" class="small"><option value="">すべて</option></select>
-                                    </div>
-                                    <div style="display:flex;gap:8px">
-                                        <input id="fromDate" type="month" style="flex:1" />
-                                        <input id="toDate" type="month" style="flex:1" />
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="list"></div>
+                    <div id="filters" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+                        <input id="filterText" type="text" placeholder="イベント名で絞り込み" style="width:100%" />
+                        <div id="filterTypeContainer" class="small" style="display:flex;flex-direction:column;max-height:160px;overflow:auto;margin-top:4px"></div>
+                        <div style="display:flex;gap:8px;margin-top:6px">
+                            <input id="fromDate" type="month" style="flex:1" />
+                            <input id="toDate" type="month" style="flex:1" />
                         </div>
-                        <div id="map"></div>
-                        <button id="openPanelBtn" style="display:none">メニュー</button>
                     </div>
+                </div>
+                <div id="list"></div>
+            </div>
+            <div id="map"></div>
+            <button id="openPanelBtn" style="display:none">メニュー</button>
+        </div>
 
-                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script>
-                const defaultCsv = 'https://docs.google.com/spreadsheets/d/1sxGS5uA1mGthS9wLm0APub0qzjCiJ0YoSPfsllXXRb0/export?format=csv&gid=165380856';
-                const map = L.map('map').setView([35.68,139.76], 5);
-                // default
-                // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap'}).addTo(map);
-                // CartoDB Positron（フラット・ライト、視認性良し）
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap contributors, © CARTO' }).addTo(map);
-                // CartoDB Dark Matter（フラット・ダーク）
-                // L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap contributors, © CARTO' }).addTo(map);
-                let events = [];
-                let markers = [];
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+        <script>
+            const defaultCsv = 'https://docs.google.com/spreadsheets/d/1sxGS5uA1mGthS9wLm0APub0qzjCiJ0YoSPfsllXXRb0/export?format=csv&gid=165380856';
+            const map = L.map('map').setView([35.68, 139.76], 5);
+            // CartoDB Positron（フラット・ライト）
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap contributors, © CARTO' }).addTo(map);
 
-                function getField(ev,name){ if(!ev) return undefined; const target = name.toLowerCase(); for(const k in ev){ if(k && k.trim().toLowerCase()===target) return ev[k]; } return undefined; }
-                function formatDate(d){ if(!d) return ''; if(!(d instanceof Date)) d = parseDateSafe(d); if(!d) return ''; const y=d.getFullYear(), m=d.getMonth()+1, dd=d.getDate(); return `${y}/${m}/${dd}`; }
-                function parseDateSafe(s){ if(!s) return null; const d=new Date(s); if(!isNaN(d)) return d; const s2 = s.replace(/\./g,'-').replace(/\//g,'-'); const d2 = new Date(s2); if(!isNaN(d2)) return d2; return null; }
-                function monthIndexOf(value){ if(!value) return null; if(typeof value==='string'){ const m=value.match(/^(\d{4})-(\d{2})$/); if(m){ const y=parseInt(m[1],10); const mm=parseInt(m[2],10); return y*12+(mm-1);} } const d=(value instanceof Date)?value:parseDateSafe(value); if(!d) return null; return d.getFullYear()*12 + d.getMonth(); }
-                function monthIndexToYYYYMM(mi){ if(mi==null) return ''; const y=Math.floor(mi/12); const m=(mi%12)+1; return `${y}-${String(m).padStart(2, '0')}`; }
-                function clearMarkers(){markers.forEach(m => { if (m.leaflet) map.removeLayer(m.leaflet); }); markers=[]; }
-                function makeIcon(url, title){
-                    if(!url) url='images/ingress.png';
-                    try{
-                        const safeUrl = escapeAttr(url);
-                        const safeTitle = escapeHtml(title || '');
-                        const html = `<div><img src="${safeUrl}" alt="" /><div class="marker-label">${safeTitle}</div></div>`;
-                        return L.divIcon({ html, className: 'custom-div-icon', iconSize: [32, 44], iconAnchor: [16, 32], popupAnchor: [0, -32] });
-                    }catch(e){
-                        return null;
+            let events = [];
+            let markers = [];
+
+            function getField(ev, name) {
+                if (!ev) return undefined;
+                const target = name.toLowerCase();
+                for (const k in ev) {
+                    if (k && k.trim().toLowerCase() === target) return ev[k];
+                }
+                return undefined;
+            }
+
+            function formatDate(d) {
+                if (!d) return '';
+                if (!(d instanceof Date)) d = parseDateSafe(d);
+                if (!d) return '';
+                const y = d.getFullYear();
+                const m = d.getMonth() + 1;
+                const dd = d.getDate();
+                return `${y}/${m}/${dd}`;
+            }
+
+            function parseDateSafe(s) {
+                if (!s) return null;
+                const d = new Date(s);
+                if (!isNaN(d)) return d;
+                const s2 = s.replace(/\./g, '-').replace(/\//g, '-');
+                const d2 = new Date(s2);
+                if (!isNaN(d2)) return d2;
+                return null;
+            }
+
+            function monthIndexOf(value) {
+                if (!value) return null;
+                if (typeof value === 'string') {
+                    const m = value.match(/^(\d{4})-(\d{2})$/);
+                    if (m) {
+                        const y = parseInt(m[1], 10);
+                        const mm = parseInt(m[2], 10);
+                        return y * 12 + (mm - 1);
                     }
                 }
+                const d = (value instanceof Date) ? value : parseDateSafe(value);
+                if (!d) return null;
+                return d.getFullYear() * 12 + d.getMonth();
+            }
 
-                function render(){
-                    clearMarkers();
-                const list=document.getElementById('list'); list.innerHTML='';
-                const q=document.getElementById('filterText').value.trim().toLowerCase();
+            function monthIndexToYYYYMM(mi) {
+                if (mi == null) return '';
+                const y = Math.floor(mi / 12);
+                const m = (mi % 12) + 1;
+                return `${y}-${String(m).padStart(2, '0')}`;
+            }
+
+            function clearMarkers() {
+                markers.forEach(m => { if (m.leaflet) map.removeLayer(m.leaflet); });
+                markers = [];
+            }
+
+            function makeIcon(url, title) {
+                if (!url) url = 'images/ingress.png';
+                try {
+                    const safeUrl = escapeAttr(url);
+                    const safeTitle = escapeHtml(title || '');
+                    const html = `<div><img src="${safeUrl}" alt="" /><div class="marker-label">${safeTitle}</div></div>`;
+                    return L.divIcon({ html, className: 'custom-div-icon', iconSize: [32, 44], iconAnchor: [16, 32], popupAnchor: [0, -32] });
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function render() {
+                clearMarkers();
+                const list = document.getElementById('list'); list.innerHTML = '';
+                const q = document.getElementById('filterText').value.trim().toLowerCase();
                 const from = monthIndexOf(document.getElementById('fromDate').value);
                 const to = monthIndexOf(document.getElementById('toDate').value);
-                const visible=[];
-      events.forEach(ev=>{
-        const title=(getField(ev,'title')||'').toString(); if(!title) return;
-                const dateRaw=getField(ev,'date')||getField(ev,'Date')||getField(ev,'日付')||'';
-                const date=ev.dateObj||parseDateSafe(dateRaw);
-                const typeVal=(getField(ev,'type')||'').toString();
-                if(q && !title.toLowerCase().includes(q) && !((getField(ev,'description')||'').toLowerCase().includes(q))) return;
-                const selType=document.getElementById('filterType').value; if(selType && typeVal !== selType) return;
-                const evMonth = monthIndexOf(date) || monthIndexOf(getField(ev,'date'));
-                if(from!=null && evMonth!=null && evMonth<from) return; if(to!=null && evMonth!=null && evMonth>to) return;
-                visible.push({ev, title, date, dateRaw, typeVal, evMonth});
-      });
-      visible.sort((a,b)=>{ const am=a.evMonth!=null?a.evMonth:(a.date?monthIndexOf(a.date):0); const bm=b.evMonth!=null?b.evMonth:(b.date?monthIndexOf(b.date):0); if(am!==bm) return am-bm; const at=a.date?a.date.getTime():0; const bt=b.date?b.date.getTime():0; return at-bt; });
-      visible.forEach(item=>{
-        const ev=item.ev, title=item.title, date=item.date, dateRaw=item.dateRaw, typeVal=item.typeVal;
-                // marker column takes precedence: images/${marker}
-                let iconUrl = null;
-                const markerCol = (getField(ev, 'marker') || '').toString().trim();
-                if (markerCol) {
-                    iconUrl = 'images/' + markerCol;
-                } else {
-                    const tv = typeVal.toLowerCase();
-                    if (tv.includes('first saturday') || tv.includes('vfs')) iconUrl = 'images/fs.png';
-                    else if (tv.includes('mission day') || tv.includes('missionday')) iconUrl = 'images/md.png';
-                    else iconUrl = getField(ev, 'customicon') || getField(ev, 'icon') || null;
-                    if (!iconUrl) iconUrl = 'images/ingress.png';
-                }
-                const lat=parseFloat((getField(ev,'lat')||getField(ev,'latitude')||getField(ev,'y')||'').toString().replace(/\s+/g,''));
-                const lng=parseFloat((getField(ev,'lng')||getField(ev,'longitude')||getField(ev,'x')||'').toString().replace(/\s+/g,''));
-                const row=document.createElement('div');
-                row.className='item';
-                const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true;
-                const label=document.createElement('label');
-                const detailUrl = escapeAttr(getField(ev,'url')||getField(ev,'URL')||'');
-                label.innerHTML = `<a href="${detailUrl}" target="_blank" style="text-decoration:none;color:inherit"><strong>${escapeHtml(getField(ev, 'title') || '無題')}</strong></a><div class="meta">${escapeHtml(formatDate(date) || dateRaw || '')} — ${escapeHtml(getField(ev, 'portalname') || '')}</div>`;
-                row.appendChild(cb);
-                if(iconUrl){ const img=document.createElement('img'); img.src=iconUrl; img.alt=''; img.style.width='20px'; img.style.height='20px'; img.style.objectFit='contain'; img.style.marginLeft='8px'; row.appendChild(img); }
-                row.appendChild(label);
-                list.appendChild(row);
-                let leafletMarker=null;
-                if(!isNaN(lat)&&!isNaN(lng)){
-                    const titleText = getField(ev, 'title') || '';
-                    const icon = makeIcon(iconUrl, titleText);
-                    leafletMarker = L.marker([lat,lng], icon?{icon}:{ }).addTo(map);
-                    const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev,'url')||getField(ev,'URL')||'')}" target="_blank">詳細</a></div></div>`;
-                    leafletMarker.bindPopup(popupHtml, {autoPan: false});
-                }
-                markers.push({leaflet:leafletMarker,data:ev,checkbox:cb});
-                cb.addEventListener('change',()=>{ if(leafletMarker){ if(cb.checked) map.addLayer(leafletMarker); else map.removeLayer(leafletMarker); } });
-      });
-    }
+                const visible = [];
+                events.forEach(ev => {
+                    const title = (getField(ev, 'title') || '').toString(); if (!title) return;
+                    const dateRaw = getField(ev, 'date') || getField(ev, 'Date') || getField(ev, '日付') || '';
+                    const date = ev.dateObj || parseDateSafe(dateRaw);
+                    const typeVal = (getField(ev, 'type') || '').toString();
+                    if (q && !title.toLowerCase().includes(q) && !((getField(ev, 'description') || '').toLowerCase().includes(q))) return;
+                    // type filter: gather checked type-checkboxes (if any)
+                    const checkedEls = document.querySelectorAll('.type-checkbox:checked');
+                    if (checkedEls && checkedEls.length > 0) {
+                        const checkedTypes = Array.from(checkedEls).map(n => n.value);
+                        if (!checkedTypes.includes(typeVal)) return;
+                    }
+                    const evMonth = monthIndexOf(date) || monthIndexOf(getField(ev, 'date'));
+                    if (from != null && evMonth != null && evMonth < from) return; if (to != null && evMonth != null && evMonth > to) return;
+                    visible.push({ ev, title, date, dateRaw, typeVal, evMonth });
+                });
+                visible.sort((a, b) => { const am = a.evMonth != null ? a.evMonth : (a.date ? monthIndexOf(a.date) : 0); const bm = b.evMonth != null ? b.evMonth : (b.date ? monthIndexOf(b.date) : 0); if (am !== bm) return am - bm; const at = a.date ? a.date.getTime() : 0; const bt = b.date ? b.date.getTime() : 0; return at - bt; });
+                visible.forEach(item => {
+                    const ev = item.ev, title = item.title, date = item.date, dateRaw = item.dateRaw, typeVal = item.typeVal;
+                    // marker column takes precedence: images/${marker}
+                    let iconUrl = null;
+                    const markerCol = (getField(ev, 'marker') || '').toString().trim();
+                    if (markerCol) {
+                        iconUrl = 'images/' + markerCol;
+                    } else {
+                        const tv = typeVal.toLowerCase();
+                        if (tv.includes('first saturday') || tv.includes('vfs')) iconUrl = 'images/fs.png';
+                        else if (tv.includes('mission day') || tv.includes('missionday')) iconUrl = 'images/md.png';
+                        else iconUrl = getField(ev, 'customicon') || getField(ev, 'icon') || null;
+                        if (!iconUrl) iconUrl = 'images/ingress.png';
+                    }
+                    const lat = parseFloat((getField(ev, 'lat') || getField(ev, 'latitude') || getField(ev, 'y') || '').toString().replace(/\s+/g, ''));
+                    const lng = parseFloat((getField(ev, 'lng') || getField(ev, 'longitude') || getField(ev, 'x') || '').toString().replace(/\s+/g, ''));
+                    const row = document.createElement('div');
+                    row.className = 'item';
+                    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true;
+                    const label = document.createElement('label');
+                    const detailUrl = escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '');
+                    label.innerHTML = `<a href="${detailUrl}" target="_blank" style="text-decoration:none;color:inherit"><strong>${escapeHtml(getField(ev, 'title') || '無題')}</strong></a><div class="meta">${escapeHtml(formatDate(date) || dateRaw || '')} — ${escapeHtml(getField(ev, 'portalname') || '')}</div>`;
+                    row.appendChild(cb);
+                    if (iconUrl) { const img = document.createElement('img'); img.src = iconUrl; img.alt = ''; img.style.width = '20px'; img.style.height = '20px'; img.style.objectFit = 'contain'; img.style.marginLeft = '8px'; row.appendChild(img); }
+                    row.appendChild(label);
+                    list.appendChild(row);
+                    let leafletMarker = null;
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const titleText = getField(ev, 'title') || '';
+                        const icon = makeIcon(iconUrl, titleText);
+                        leafletMarker = L.marker([lat, lng], icon ? { icon } : {}).addTo(map);
+                        const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a></div></div>`;
+                        leafletMarker.bindPopup(popupHtml, { autoPan: false });
+                    }
+                    markers.push({ leaflet: leafletMarker, data: ev, checkbox: cb });
+                    cb.addEventListener('change', () => { if (leafletMarker) { if (cb.checked) map.addLayer(leafletMarker); else map.removeLayer(leafletMarker); } });
+                });
+            }
 
-                function setAllCheckboxes(checked){
-                    markers.forEach(m => {
-                        try { m.checkbox.checked = checked; if (m.leaflet) { if (checked) map.addLayer(m.leaflet); else map.removeLayer(m.leaflet); } } catch (e) { }
-                    });
-    }
-                function escapeHtml(s){ if(!s) return ''; return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;'); }
-            function escapeAttr(s){ if(!s) return ''; return encodeURI(s); }
-            async function loadCsv(url){ try{ const res=await fetch(url); if(!res.ok) throw new Error('Failed to fetch CSV'); const txt=await res.text(); const parsed=Papa.parse(txt,{header:true,skipEmptyLines:true}); events=parsed.data.map(r=>{ const n={ }; for(const k in r) n[k.trim()]=r[k]; if(n.date) n.dateObj=parseDateSafe(n.date); return n; }); const typeSet=new Set(); events.forEach(e=>{ const t=(getField(e,'type')||'').toString().trim(); if(t) typeSet.add(t); }); const sel=document.getElementById('filterType'); sel.innerHTML='<option value="">すべて</option>'; Array.from(typeSet).sort().forEach(t=>{ const op=document.createElement('option'); op.value=t; op.textContent=t; sel.appendChild(op); }); sel.addEventListener('change',()=>render()); render(); setTimeout(()=>{ try{ const listEl=document.getElementById('list'); if(listEl && listEl.children.length===0){let minM=null,maxM=null; events.forEach(e=>{ const dRaw=getField(e,'date')||getField(e,'Date')||''; const d=e.dateObj||parseDateSafe(dRaw); const mi=monthIndexOf(d)||monthIndexOf(dRaw); if(mi!=null){ if(minM==null||mi<minM) minM=mi; if(maxM==null||mi>maxM) maxM=mi; } }); if(minM!=null && maxM!=null){document.getElementById('fromDate').value = monthIndexToYYYYMM(minM); document.getElementById('toDate').value=monthIndexToYYYYMM(maxM); render(); } } }catch(e){ } },200); }catch(err){alert('読み込みに失敗しました: ' + err.message); } }
-            (function setDefaultYearRange(){
-      // check URL params first
-      const params = new URLSearchParams(location.search);
-            const pfrom = params.get('from');
-            const pto = params.get('to');
-            if(pfrom){ const d = parseDateSafe(pfrom); if(d) document.getElementById('fromDate').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
+            function setAllCheckboxes(checked) {
+                markers.forEach(m => {
+                    try { m.checkbox.checked = checked; if (m.leaflet) { if (checked) map.addLayer(m.leaflet); else map.removeLayer(m.leaflet); } } catch (e) { }
+                });
+            }
+
+            function escapeHtml(s) { if (!s) return ''; return ('' + s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); }
+            function escapeAttr(s) { if (!s) return ''; return encodeURI(s); }
+
+            async function loadCsv(url) {
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error('Failed to fetch CSV');
+                    const txt = await res.text();
+                    const parsed = Papa.parse(txt, { header: true, skipEmptyLines: true });
+                    events = parsed.data.map(r => { const n = {}; for (const k in r) n[k.trim()] = r[k]; if (n.date) n.dateObj = parseDateSafe(n.date); return n; });
+                    const typeSet = new Set(); events.forEach(e => { const t = (getField(e, 'type') || '').toString().trim(); if (t) typeSet.add(t); });
+                    const container = document.getElementById('filterTypeContainer') || document.getElementById('filterType');
+                    if (container) {
+                        container.innerHTML = '';
+                        Array.from(typeSet).sort().forEach(t => {
+                            const id = 'type_cb_' + t.replace(/[^a-z0-9]/gi, '_');
+                            const wrap = document.createElement('label');
+                            wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '6px'; wrap.style.fontSize = '12px';
+                            const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'type-checkbox'; cb.value = t; cb.id = id; cb.checked = true;
+                            const span = document.createElement('span'); span.textContent = t; span.style.fontSize = '12px';
+                            wrap.appendChild(cb); wrap.appendChild(span);
+                            container.appendChild(wrap);
+                            cb.addEventListener('change', () => render());
+                        });
+                    }
+                    render();
+                    setTimeout(() => { try { const listEl = document.getElementById('list'); if (listEl && listEl.children.length === 0) { let minM = null, maxM = null; events.forEach(e => { const dRaw = getField(e, 'date') || getField(e, 'Date') || ''; const d = e.dateObj || parseDateSafe(dRaw); const mi = monthIndexOf(d) || monthIndexOf(dRaw); if (mi != null) { if (minM == null || mi < minM) minM = mi; if (maxM == null || mi > maxM) maxM = mi; } }); if (minM != null && maxM != null) { document.getElementById('fromDate').value = monthIndexToYYYYMM(minM); document.getElementById('toDate').value = monthIndexToYYYYMM(maxM); render(); } } } catch (e) { } }, 200);
+                } catch (err) {
+                    alert('読み込みに失敗しました: ' + err.message);
+                }
+            }
+
+            (function setDefaultYearRange() {
+                // check URL params first
+                const params = new URLSearchParams(location.search);
+                const pfrom = params.get('from');
+                const pto = params.get('to');
+                if (pfrom) { const d = parseDateSafe(pfrom); if (d) document.getElementById('fromDate').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
+                if (pto) { const d = parseDateSafe(pto); if (d) document.getElementById('toDate').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
+                // if no params, default to this year
+                if (!pfrom && !pto) { const now = new Date(); const y = now.getFullYear(); document.getElementById('fromDate').value = `${y}-01`; document.getElementById('toDate').value = `${y}-12`; }
+            })();
+
+            document.getElementById('filterText').addEventListener('input', () => render());
+            document.getElementById('fromDate').addEventListener('change', () => render());
+            document.getElementById('toDate').addEventListener('change', () => render());
+
+            const panel = document.getElementById('panel'); const collapseBtn = document.getElementById('collapseBtn'); const openPanelBtn = document.getElementById('openPanelBtn'); let collapsed = false; collapseBtn.addEventListener('click', () => { collapsed = !collapsed; panel.style.display = collapsed ? 'none' : 'flex'; collapseBtn.textContent = collapsed ? '開く' : '閉じる'; openPanelBtn.style.display = collapsed ? 'block' : 'none'; setTimeout(() => { try { map.invalidateSize(); } catch (e) { } }, 200); }); openPanelBtn.addEventListener('click', () => { panel.style.display = 'flex'; collapsed = false; collapseBtn.textContent = '閉じる'; openPanelBtn.style.display = 'none'; setTimeout(() => { try { map.invalidateSize(); } catch (e) { } }, 200); });
+            // check/clear removed per layout change
+            loadCsv(defaultCsv);
+            window.render = render; window.loadCsv = loadCsv; window.events = events; window.map = map;
+        </script>
+    </body>
+
+    </html>
             if(pto){ const d = parseDateSafe(pto); if(d) document.getElementById('toDate').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
             // if no params, default to this year
             if(!pfrom && !pto){ const now=new Date(); const y=now.getFullYear(); document.getElementById('fromDate').value=`${y}-01`; document.getElementById('toDate').value=`${y}-12`; }
     })();
     document.getElementById('filterText').addEventListener('input',()=>render()); document.getElementById('fromDate').addEventListener('change',()=>render()); document.getElementById('toDate').addEventListener('change',()=>render());
     const panel=document.getElementById('panel'); const collapseBtn=document.getElementById('collapseBtn'); const openPanelBtn=document.getElementById('openPanelBtn'); let collapsed=false; collapseBtn.addEventListener('click',()=>{collapsed = !collapsed; panel.style.display=collapsed?'none':'flex'; collapseBtn.textContent=collapsed?'開く':'閉じる'; openPanelBtn.style.display=collapsed?'block':'none'; setTimeout(()=>{ try{map.invalidateSize(); }catch(e){ } },200); }); openPanelBtn.addEventListener('click',()=>{panel.style.display = 'flex'; collapsed=false; collapseBtn.textContent='閉じる'; openPanelBtn.style.display='none'; setTimeout(()=>{ try{map.invalidateSize(); }catch(e){ } },200); });
-    // check/clear all buttons
-    document.getElementById('checkAllBtn').addEventListener('click',()=>setAllCheckboxes(true));
-    document.getElementById('clearAllBtn').addEventListener('click',()=>setAllCheckboxes(false));
+    // check/clear removed per layout change
             loadCsv(defaultCsv);
             window.render=render; window.loadCsv=loadCsv; window.events=events; window.map=map;
     </script>
