@@ -373,6 +373,12 @@
                             const span = document.createElement('span'); span.textContent = t; span.style.fontSize = '12px';
                             wrap.appendChild(cb); wrap.appendChild(span);
                             container.appendChild(wrap);
+                            const urlParams = new URLSearchParams(location.search);
+                            const pType = urlParams.get('type');
+                            // 大文字小文字を区別せずに比較
+                            if (pType && pType.toLowerCase() === t.toLowerCase()) {
+                                cb.checked = true;
+                            }
                             cb.addEventListener('change', () => render());
                         });
                     }
