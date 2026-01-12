@@ -12,8 +12,6 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Ingress Event Map Viewer</title>
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
         <style>
             html,
             body,
@@ -163,20 +161,22 @@
         </div>
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/OverlappingMarkerSpiderfier-Leaflet/0.2.6/oms.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
         <script>
             const defaultCsv = 'https://docs.google.com/spreadsheets/d/1sxGS5uA1mGthS9wLm0APub0qzjCiJ0YoSPfsllXXRb0/export?format=csv&gid=165380856';
             const map = L.map('map').setView([35.68, 139.76], 5);
             // CartoDB Positron（フラット・ライト）
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap contributors, © CARTO' }).addTo(map);
-            const markerCluster = L.markerClusterGroup({
-                maxClusterRadius: 40, // クラスタリングする範囲（小さいほど密集しないとまとまらない）
-                spiderfyOnMaxZoom: true, // ズーム最大時にスパイダー状に展開する
-                showCoverageOnHover: false, // マウスホバーで範囲ポリゴンを表示しない
-                zoomToBoundsOnClick: true // クリックでズームイン
+            const oms = new OverlappingMarkerSpiderfier(map, {
+                keepSpiderfied: true, // 展開後、マーカーをクリックしても閉じないようにする
+                nearbyDistance: 20    // 重なっているとみなす距離（ピクセル）
             });
-            map.addLayer(markerCluster);
+            
+            // OMS経由でクリックされたときにポップアップを開く
+            oms.addListener('click', function(marker) {
+                marker.openPopup();
+            });
 
             let events = [];
             let markers = [];
@@ -233,8 +233,16 @@
             }
 
             function clearMarkers() {
-                markerCluster.clearLayers();
+                // マーカー削除時にOMSからも消す
+                markers.forEach(m => { 
+                    if (m.leaflet) {
+                        map.removeLayer(m.leaflet);
+                        oms.removeMarker(m.leaflet); // 追加
+                    }
+                });
                 markers = [];
+                // OMSの管理情報もクリア（念のため）
+                oms.clearMarkers();
             }
 
             function makeIcon(url, title) {
@@ -304,30 +312,41 @@
                         const titleText = getField(ev, 'title') || '';
                         const icon = makeIcon(iconUrl, titleText);
                         leafletMarker = L.marker([lat, lng], icon ? { icon } : {});
-                        if (cb.checked) {
-                            markerCluster.addLayer(leafletMarker);
-                        }
                         const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a></div></div>`;
                         leafletMarker.bindPopup(popupHtml, { autoPan: false });
+                        if (cb.checked) {
+                            map.addLayer(leafletMarker);
+                            oms.addMarker(leafletMarker); // OMSにも登録する
+                        }
                     }
                     markers.push({ leaflet: leafletMarker, data: ev, checkbox: cb });
-                    cb.addEventListener('change', () => {
-                        if (leafletMarker) {
-                            if (cb.checked) markerCluster.addLayer(leafletMarker);
-                            else markerCluster.removeLayer(leafletMarker);
-                        }
+                    cb.addEventListener('change', () => { 
+                        if (leafletMarker) { 
+                            if (cb.checked) {
+                                map.addLayer(leafletMarker);
+                                oms.addMarker(leafletMarker); // 表示時はOMSに追加
+                            } else {
+                                map.removeLayer(leafletMarker);
+                                oms.removeMarker(leafletMarker); // 非表示時はOMSから削除
+                            }
+                        } 
                     });
                 });
             }
 
             function setAllCheckboxes(checked) {
                 markers.forEach(m => {
-                    try {
-                        m.checkbox.checked = checked;
-                        if (m.leaflet) {
-                            if (checked) markerCluster.addLayer(m.leaflet);
-                            else markerCluster.removeLayer(m.leaflet);
-                        }
+                    try { 
+                        m.checkbox.checked = checked; 
+                        if (m.leaflet) { 
+                            if (checked) {
+                                map.addLayer(m.leaflet);
+                                oms.addMarker(m.leaflet); // 追加
+                            } else {
+                                map.removeLayer(m.leaflet);
+                                oms.removeMarker(m.leaflet); // 追加
+                            }
+                        } 
                     } catch (e) { }
                 });
             }
