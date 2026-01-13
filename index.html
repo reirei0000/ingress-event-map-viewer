@@ -95,7 +95,7 @@
             #openPanelBtn {
                 position: absolute;
                 left: 10px;
-                top: 70px; /* moved down to avoid overlapping Leaflet zoom controls */
+                top: 10px;
                 z-index: 1400;
                 padding: 6px 8px;
                 background: #fff;
@@ -146,7 +146,7 @@
                         <button id="collapseBtn">閉じる</button>
                     </div>
                     <div id="filters" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-                        <input id="filterText" type="text" placeholder="イベント名で絞り込み" style="width:100%" />
+                        <input id="filterText" type="text" placeholder="イベント名で絞り込み" style="width: 100%; box-sizing: border-box;" />
                         <div id="filterTypeContainer" class="small" style="display:flex;flex-direction:column;max-height:160px;overflow:auto;margin-top:4px"></div>
                         <div style="display:flex;gap:8px;margin-top:6px">
                             <input id="fromDate" type="month" style="flex:1" />
@@ -165,7 +165,8 @@
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
         <script>
             const defaultCsv = 'https://docs.google.com/spreadsheets/d/1sxGS5uA1mGthS9wLm0APub0qzjCiJ0YoSPfsllXXRb0/export?format=csv&gid=165380856';
-            const map = L.map('map').setView([35.68, 139.76], 5);
+            const map = L.map('map', { zoomControl: false }).setView([35.68, 139.76], 5);
+            L.control.zoom({ position: 'topright' }).addTo(map);
             // CartoDB Positron（フラット・ライト）
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap contributors, © CARTO' }).addTo(map);
             const oms = new OverlappingMarkerSpiderfier(map, {
@@ -299,7 +300,7 @@
                     const lng = parseFloat((getField(ev, 'lng') || getField(ev, 'longitude') || getField(ev, 'x') || '').toString().replace(/\s+/g, ''));
                     const row = document.createElement('div');
                     row.className = 'item';
-                    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true;
+                    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = false;
                     const label = document.createElement('label');
                     const detailUrl = escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '');
                     label.innerHTML = `<a href="${detailUrl}" target="_blank" style="text-decoration:none;color:inherit"><strong>${escapeHtml(getField(ev, 'title') || '無題')}</strong></a><div class="meta">${escapeHtml(formatDate(date) || dateRaw || '')} — ${escapeHtml(getField(ev, 'portalname') || '')}</div>`;
@@ -314,22 +315,40 @@
                         leafletMarker = L.marker([lat, lng], icon ? { icon } : {});
                         const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a></div></div>`;
                         leafletMarker.bindPopup(popupHtml, { autoPan: false });
-                        if (cb.checked) {
-                            map.addLayer(leafletMarker);
-                            oms.addMarker(leafletMarker); // OMSにも登録する
-                        }
+                        map.addLayer(leafletMarker);
+                        oms.addMarker(leafletMarker); // OMSにも登録する
                     }
                     markers.push({ leaflet: leafletMarker, data: ev, checkbox: cb });
-                    cb.addEventListener('change', () => { 
-                        if (leafletMarker) { 
-                            if (cb.checked) {
-                                map.addLayer(leafletMarker);
-                                oms.addMarker(leafletMarker); // 表示時はOMSに追加
-                            } else {
-                                map.removeLayer(leafletMarker);
-                                oms.removeMarker(leafletMarker); // 非表示時はOMSから削除
-                            }
-                        } 
+                    cb.addEventListener('change', () => {
+                        const anyChecked = markers.some(m => m.checkbox.checked);
+                        if (anyChecked) {
+                            // At least one is checked, so show only checked ones.
+                            markers.forEach(m => {
+                                if (m.leaflet) {
+                                    if (m.checkbox.checked) {
+                                        if (!map.hasLayer(m.leaflet)) {
+                                            map.addLayer(m.leaflet);
+                                            oms.addMarker(m.leaflet);
+                                        }
+                                    } else {
+                                        if (map.hasLayer(m.leaflet)) {
+                                            map.removeLayer(m.leaflet);
+                                            oms.removeMarker(m.leaflet);
+                                        }
+                                    }
+                                }
+                            });
+                        } else {
+                            // No checkboxes are checked, so show all.
+                            markers.forEach(m => {
+                                if (m.leaflet) {
+                                    if (!map.hasLayer(m.leaflet)) {
+                                        map.addLayer(m.leaflet);
+                                        oms.addMarker(m.leaflet);
+                                    }
+                                }
+                            });
+                        }
                     });
                 });
             }
