@@ -143,13 +143,17 @@
                 <div id="panelHeader">
                     <div style="display:flex;justify-content:space-between;align-items:center">
                         <strong>イベント一覧</strong>
-                        <button id="collapseBtn">閉じる</button>
+                        <div>
+                            <button id="shareBtn" title="共有URLをコピー" style="background:none;border:none;padding:8px;font-size:1.2em;cursor:pointer;">🔗</button>
+                            <button id="collapseBtn">閉じる</button>
+                        </div>
                     </div>
                     <div id="filters" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
                         <input id="filterText" type="text" placeholder="イベント名で絞り込み" style="width: 100%; box-sizing: border-box;" />
                         <div id="filterTypeContainer" class="small" style="display:flex;flex-direction:column;max-height:160px;overflow:auto;margin-top:4px"></div>
-                        <div style="display:flex;gap:8px;margin-top:6px">
+                        <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
                             <input id="fromDate" type="month" style="flex:1" />
+                            <span>〜</span>
                             <input id="toDate" type="month" style="flex:1" />
                         </div>
                     </div>
@@ -203,6 +207,11 @@
 
             function parseDateSafe(s) {
                 if (!s) return null;
+                // YYYY-MM is parsed as UTC, which can cause timezone issues.
+                // Treat as local time by appending day.
+                if (/^\d{4}-\d{2}$/.test(s)) {
+                    s = s + '-01';
+                }
                 const d = new Date(s);
                 if (!isNaN(d)) return d;
                 const s2 = s.replace(/\./g, '-').replace(/\//g, '-');
@@ -394,23 +403,29 @@
                             container.appendChild(wrap);
                             const urlParams = new URLSearchParams(location.search);
                             const pType = urlParams.get('type');
-                            // 大文字小文字を区別せずに比較
-                            if (pType && pType.toLowerCase() === t.toLowerCase()) {
-                                cb.checked = true;
+                            if (pType) {
+                                const types = pType.toLowerCase().split(',');
+                                if (types.includes(t.toLowerCase())) {
+                                    cb.checked = true;
+                                }
                             }
                             cb.addEventListener('change', () => render());
                         });
                     }
                     render();
-                    setTimeout(() => { try { const listEl = document.getElementById('list'); if (listEl && listEl.children.length === 0) { let minM = null, maxM = null; events.forEach(e => { const dRaw = getField(e, 'date') || getField(e, 'Date') || ''; const d = e.dateObj || parseDateSafe(dRaw); const mi = monthIndexOf(d) || monthIndexOf(dRaw); if (mi != null) { if (minM == null || mi < minM) minM = mi; if (maxM == null || mi > maxM) maxM = mi; } }); if (minM != null && maxM != null) { document.getElementById('fromDate').value = monthIndexToYYYYMM(minM); document.getElementById('toDate').value = monthIndexToYYYYMM(maxM); render(); } } } catch (e) { } }, 200);
+                    setTimeout(() => { try { const listEl = document.getElementById('list'); const params = new URLSearchParams(location.search); const pfrom = params.get('from'); const pto = params.get('to'); if (listEl && listEl.children.length === 0 && !pfrom && !pto) { let minM = null, maxM = null; events.forEach(e => { const dRaw = getField(e, 'date') || getField(e, 'Date') || ''; const d = e.dateObj || parseDateSafe(dRaw); const mi = monthIndexOf(d) || monthIndexOf(dRaw); if (mi != null) { if (minM == null || mi < minM) minM = mi; if (maxM == null || mi > maxM) maxM = mi; } }); if (minM != null && maxM != null) { document.getElementById('fromDate').value = monthIndexToYYYYMM(minM); document.getElementById('toDate').value = monthIndexToYYYYMM(maxM); render(); } } } catch (e) { } }, 200);
                 } catch (err) {
                     alert('読み込みに失敗しました: ' + err.message);
                 }
             }
 
-            (function setDefaultYearRange() {
+            (function setDefaultFilters() {
                 // check URL params first
                 const params = new URLSearchParams(location.search);
+                const q = params.get('q');
+                if (q) {
+                    document.getElementById('filterText').value = q;
+                }
                 const pfrom = params.get('from');
                 const pto = params.get('to');
                 if (pfrom) { const d = parseDateSafe(pfrom); if (d) document.getElementById('fromDate').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
@@ -422,6 +437,24 @@
             document.getElementById('filterText').addEventListener('input', () => render());
             document.getElementById('fromDate').addEventListener('change', () => render());
             document.getElementById('toDate').addEventListener('change', () => render());
+            document.getElementById('shareBtn').addEventListener('click', () => {
+                const params = new URLSearchParams();
+                const filterText = document.getElementById('filterText').value.trim();
+                if (filterText) params.set('q', filterText);
+                const fromDate = document.getElementById('fromDate').value;
+                if (fromDate) params.set('from', fromDate);
+                const toDate = document.getElementById('toDate').value;
+                if (toDate) params.set('to', toDate);
+                const checkedTypes = Array.from(document.querySelectorAll('.type-checkbox:checked')).map(cb => cb.value);
+                if (checkedTypes.length > 0) params.set('type', checkedTypes.join(','));
+                const newUrl = new URL(location.href);
+                newUrl.search = params.toString();
+                navigator.clipboard.writeText(newUrl.toString()).then(() => {
+                    alert('共有用URLをクリップボードにコピーしました。');
+                }, () => {
+                    alert('クリップボードへのコピーに失敗しました。');
+                });
+            });
 
             const panel = document.getElementById('panel'); const collapseBtn = document.getElementById('collapseBtn'); const openPanelBtn = document.getElementById('openPanelBtn'); let collapsed = false; collapseBtn.addEventListener('click', () => { collapsed = !collapsed; panel.style.display = collapsed ? 'none' : 'flex'; collapseBtn.textContent = collapsed ? '開く' : '閉じる'; openPanelBtn.style.display = collapsed ? 'block' : 'none'; setTimeout(() => { try { map.invalidateSize(); } catch (e) { } }, 200); }); openPanelBtn.addEventListener('click', () => { panel.style.display = 'flex'; collapsed = false; collapseBtn.textContent = '閉じる'; openPanelBtn.style.display = 'none'; setTimeout(() => { try { map.invalidateSize(); } catch (e) { } }, 200); });
             // check/clear removed per layout change
