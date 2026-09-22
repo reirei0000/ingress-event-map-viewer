@@ -180,9 +180,14 @@
             nearbyDistance: 20    // 重なっているとみなす距離（ピクセル）
         });
 
-        // OMS経由でクリックされたときにポップアップを開く
+        // OMS経由でクリックされたときにポップアップを開く（単体・展開後マーカークリック時のみ）
         oms.addListener('click', function (marker) {
-            marker.openPopup();
+            if (marker.popupHtml) {
+                L.popup({ autoPan: false })
+                    .setLatLng(marker.getLatLng())
+                    .setContent(marker.popupHtml)
+                    .openOn(map);
+            }
         });
 
         let events = [];
@@ -325,7 +330,7 @@
                     const icon = makeIcon(iconUrl, titleText);
                     leafletMarker = L.marker([lat, lng], icon ? { icon } : {});
                     const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a></div></div>`;
-                    leafletMarker.bindPopup(popupHtml, { autoPan: false });
+                    leafletMarker.popupHtml = popupHtml;
                     map.addLayer(leafletMarker);
                     oms.addMarker(leafletMarker); // OMSにも登録する
                 }
