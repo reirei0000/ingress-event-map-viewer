@@ -185,34 +185,34 @@
             text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
 
-        /* Neon pulse animation for upcoming events */
+        /* Rotating arrow ring for upcoming events (CSS only) */
         .pulse-ring {
             position: absolute;
             top: 16px;
             left: 50%;
-            width: 16px;
-            height: 16px;
+            width: 44px;
+            height: 44px;
+            box-sizing: border-box;
             border-radius: 50%;
-            border: 2px solid #ffd700;
-            box-shadow: 0 0 10px #ffd700, inset 0 0 10px #ffd700;
-            animation: pulse-ring-anim 2s infinite ease-out;
+            border: 3px solid transparent;
+            border-top-color: #ffd700;
+            border-right-color: #ffd700;
+            border-bottom: 3px dashed #ffd700;
+            border-left: 3px dashed #ffd700;
+            animation: rotate-arrow-ring 2.5s linear infinite;
             pointer-events: none;
             z-index: -1;
+            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
         }
 
-        @keyframes pulse-ring-anim {
+
+
+        @keyframes rotate-arrow-ring {
             0% {
-                transform: translate(-50%, -50%) scale(0.6);
-                opacity: 1;
+                transform: translate(-50%, -50%) rotate(0deg);
             }
-
-            70% {
-                opacity: 0.8;
-            }
-
             100% {
-                transform: translate(-50%, -50%) scale(2.2);
-                opacity: 0;
+                transform: translate(-50%, -50%) rotate(360deg);
             }
         }
 
@@ -431,7 +431,7 @@
                 if (from != null && evMonth != null && evMonth < from) return; if (to != null && evMonth != null && evMonth > to) return;
                 visible.push({ ev, title, date, dateRaw, typeVal, evMonth });
             });
-            visible.sort((a, b) => { const am = a.evMonth != null ? a.evMonth : (a.date ? monthIndexOf(a.date) : 0); const bm = b.evMonth != null ? b.evMonth : (b.date ? monthIndexOf(b.date) : 0); if (am !== bm) return am - bm; const at = a.date ? a.date.getTime() : 0; const bt = b.date ? b.date.getTime() : 0; return at - bt; });
+            visible.sort((a, b) => { const am = a.evMonth != null ? a.evMonth : (a.date ? monthIndexOf(a.date) : 0); const bm = b.evMonth != null ? b.evMonth : (b.date ? monthIndexOf(b.date) : 0); if (am !== bm) return bm - am; const at = a.date ? a.date.getTime() : 0; const bt = b.date ? b.date.getTime() : 0; return bt - at; });
 
             const today = new Date();
             today.setHours(0, 0, 0, 0);
