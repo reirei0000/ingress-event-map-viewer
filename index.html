@@ -185,7 +185,7 @@
             text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
 
-        /* Rotating arrow ring for upcoming events (CSS only) */
+        /* Rotating ring for upcoming events (CSS only) */
         .pulse-ring {
             position: absolute;
             top: 16px;
@@ -203,6 +203,26 @@
             pointer-events: none;
             z-index: -1;
             filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+        }
+
+        /* Rotating ring for ongoing events (CSS only) */
+        .ongoing-ring {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            width: 44px;
+            height: 44px;
+            box-sizing: border-box;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #d946ef;
+            border-right-color: #d946ef;
+            border-bottom: 3px dashed #d946ef;
+            border-left: 3px dashed #d946ef;
+            animation: rotate-arrow-ring 1.8s linear infinite;
+            pointer-events: none;
+            z-index: -1;
+            filter: drop-shadow(0 0 8px rgba(217, 70, 239, 0.8));
         }
 
 
@@ -395,13 +415,18 @@
             oms.clearMarkers();
         }
 
-        function makeIcon(url, title, isUpcoming = false) {
+        function makeIcon(url, title, status = null) {
             if (!url) url = 'images/ingress.png';
             try {
                 const safeUrl = escapeAttr(url);
                 const safeTitle = escapeHtml(title || '');
-                const pulseHtml = isUpcoming ? '<div class="pulse-ring"></div>' : '';
-                const html = `<div style="position:relative;">${pulseHtml}<img src="${safeUrl}" alt="" /><div class="marker-label">${safeTitle}</div></div>`;
+                let ringHtml = '';
+                if (status === 'ongoing') {
+                    ringHtml = '<div class="ongoing-ring"></div>';
+                } else if (status === 'upcoming') {
+                    ringHtml = '<div class="pulse-ring"></div>';
+                }
+                const html = `<div style="position:relative;">${ringHtml}<img src="${safeUrl}" alt="" /><div class="marker-label">${safeTitle}</div></div>`;
                 return L.divIcon({ html, className: 'custom-div-icon', iconSize: [32, 44], iconAnchor: [16, 32], popupAnchor: [0, -32] });
             } catch (e) {
                 return null;
@@ -435,15 +460,34 @@
 
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const todayEnd = new Date(today);
+            todayEnd.setHours(23, 59, 59, 999);
+            const todayMs = today.getTime();
+            const todayEndMs = todayEnd.getTime();
 
             visible.forEach(item => {
                 const ev = item.ev, title = item.title, date = item.date, dateRaw = item.dateRaw, typeVal = item.typeVal;
 
-                // 未来のイベント判定
+                // 開催中 (ongoing) / 開催予定 (upcoming) 判定
                 const toRaw = getField(ev, 'to') || getField(ev, 'To') || getField(ev, '終了日') || '';
                 const toDate = parseDateSafe(toRaw);
-                const checkDate = toDate || date;
-                const isUpcoming = checkDate ? (checkDate.getTime() >= today.getTime()) : false;
+
+                let eventStatus = null; // 'ongoing' | 'upcoming' | null
+                if (date) {
+                    const startDateObj = new Date(date);
+                    startDateObj.setHours(0, 0, 0, 0);
+                    const startMs = startDateObj.getTime();
+
+                    const endDateObj = toDate ? new Date(toDate) : new Date(date);
+                    endDateObj.setHours(23, 59, 59, 999);
+                    const endMs = endDateObj.getTime();
+
+                    if (todayMs >= startMs && todayMs <= endMs) {
+                        eventStatus = 'ongoing';
+                    } else if (startMs > todayEndMs) {
+                        eventStatus = 'upcoming';
+                    }
+                }
 
                 // marker column takes precedence: images/${marker}
                 let iconUrl = null;
@@ -464,8 +508,15 @@
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = false;
                 const label = document.createElement('label');
                 const detailUrl = escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '');
-                const upcomingBadge = isUpcoming ? ' <span style="background:#ffd700;color:#000;font-size:10px;font-weight:bold;padding:1px 4px;border-radius:3px;margin-left:4px;">UPCOMING</span>' : '';
-                label.innerHTML = `<a href="${detailUrl}" target="_blank" style="text-decoration:none;color:inherit"><strong>${escapeHtml(getField(ev, 'title') || '無題')}</strong>${upcomingBadge}</a><div class="meta">${escapeHtml(formatDate(date) || dateRaw || '')} — ${escapeHtml(getField(ev, 'portalname') || '')}</div>`;
+
+                let statusBadge = '';
+                if (eventStatus === 'ongoing') {
+                    statusBadge = ' <span style="background:#d946ef;color:#fff;font-size:10px;font-weight:bold;padding:1px 4px;border-radius:3px;margin-left:4px;">ONGOING</span>';
+                } else if (eventStatus === 'upcoming') {
+                    statusBadge = ' <span style="background:#ffd700;color:#000;font-size:10px;font-weight:bold;padding:1px 4px;border-radius:3px;margin-left:4px;">UPCOMING</span>';
+                }
+
+                label.innerHTML = `<a href="${detailUrl}" target="_blank" style="text-decoration:none;color:inherit"><strong>${escapeHtml(getField(ev, 'title') || '無題')}</strong>${statusBadge}</a><div class="meta">${escapeHtml(formatDate(date) || dateRaw || '')} — ${escapeHtml(getField(ev, 'portalname') || '')}</div>`;
                 row.appendChild(cb);
                 if (iconUrl) { const img = document.createElement('img'); img.src = iconUrl; img.alt = ''; img.style.width = '20px'; img.style.height = '20px'; img.style.objectFit = 'contain'; img.style.marginLeft = '8px'; row.appendChild(img); }
                 row.appendChild(label);
@@ -473,7 +524,7 @@
                 let leafletMarker = null;
                 if (!isNaN(lat) && !isNaN(lng)) {
                     const titleText = getField(ev, 'title') || '';
-                    const icon = makeIcon(iconUrl, titleText, isUpcoming);
+                    const icon = makeIcon(iconUrl, titleText, eventStatus);
                     leafletMarker = L.marker([lat, lng], icon ? { icon } : {});
                     const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a></div></div>`;
                     leafletMarker.popupHtml = popupHtml;
