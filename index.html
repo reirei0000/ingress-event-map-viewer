@@ -5,7 +5,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Ingress Event Map Viewer</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23121215'/><polygon points='50,10 85,30 85,70 50,90 15,70 15,30' stroke='%2338bdf8' stroke-width='3.5' fill='none' opacity='0.85'/><circle cx='50' cy='50' r='33' stroke='%2338bdf8' stroke-width='1.5' stroke-dasharray='5,4' fill='none' opacity='0.45'/><path d='M50 24 C38 24 29 33 29 45 C29 61 50 75 50 75 C50 75 71 61 71 45 C71 33 62 24 50 24 Z' fill='%23ffd700'/><circle cx='50' cy='43' r='8' fill='%23121215'/><circle cx='50' cy='43' r='4' fill='%2338bdf8'/></svg>" type="image/svg+xml" />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23121215'/><polygon points='50,10 85,30 85,70 50,90 15,70 15,30' stroke='%2338bdf8' stroke-width='3.5' fill='none' opacity='0.85'/><circle cx='50' cy='50' r='33' stroke='%2338bdf8' stroke-width='1.5' stroke-dasharray='5,4' fill='none' opacity='0.45'/><path d='M50 24 C38 24 29 33 29 45 C29 61 50 75 50 75 C50 75 71 61 71 45 C71 33 62 24 50 24 Z' fill='%23ffd700'/><circle cx='50' cy='43' r='8' fill='%23121215'/><circle cx='50' cy='43' r='4' fill='%2338bdf8'/></svg>"
+        type="image/svg+xml" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         html,
@@ -85,9 +87,11 @@
             width: 6px;
             height: 6px;
         }
+
         ::-webkit-scrollbar-track {
             background: #18181b;
         }
+
         ::-webkit-scrollbar-thumb {
             background: #3f3f46;
             border-radius: 3px;
@@ -245,6 +249,7 @@
             0% {
                 transform: translate(-50%, -50%) rotate(0deg);
             }
+
             100% {
                 transform: translate(-50%, -50%) rotate(360deg);
             }
@@ -258,13 +263,16 @@
             border: 1px solid #3f3f46;
             box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6) !important;
         }
+
         .leaflet-container a.leaflet-popup-close-button {
             color: #a1a1aa !important;
             padding: 4px 4px 0 0 !important;
         }
+
         .leaflet-container a.leaflet-popup-close-button:hover {
             color: #f4f4f5 !important;
         }
+
         .leaflet-popup-content a {
             color: #38bdf8 !important;
         }
@@ -275,6 +283,7 @@
             color: #e4e4e7 !important;
             border-color: #3f3f46 !important;
         }
+
         .leaflet-control-zoom a:hover {
             background-color: #27272a !important;
             color: #ffffff !important;
@@ -510,6 +519,7 @@
                     const tv = typeVal.toLowerCase();
                     if (tv.includes('first saturday') || tv.includes('vfs')) iconUrl = 'images/fs.png';
                     else if (tv.includes('mission day') || tv.includes('missionday')) iconUrl = 'images/md.png';
+                    else if (tv.includes('nl1331') || tv.includes('nl-1331') || tv.includes('nl 1331')) iconUrl = 'images/nl1331.png';
                     else iconUrl = getField(ev, 'customicon') || getField(ev, 'icon') || null;
                     if (!iconUrl) iconUrl = 'images/ingress.png';
                 }
@@ -666,7 +676,7 @@
             const newUrl = new URL(location.href);
             newUrl.search = params.toString();
             navigator.clipboard.writeText(newUrl.toString()).then(() => {
-                alert('共有用URLをクリップボードにコピーしました。');
+                alert('hello 共有用URLをクリップボードにコピーしました。');
             }, () => {
                 alert('クリップボードへのコピーに失敗しました。');
             });
