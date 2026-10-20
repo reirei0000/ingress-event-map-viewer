@@ -31,8 +31,8 @@
             left: 0;
             top: 0;
             bottom: 0;
-            width: 360px;
-            max-width: 80vw;
+            width: 300px;
+            max-width: 85vw;
             background: #18181b;
             border-right: 1px solid #27272a;
             display: flex;
@@ -42,7 +42,7 @@
         }
 
         #panelHeader {
-            padding: 12px;
+            padding: 10px;
             background: #1e1e24;
             border-bottom: 1px solid #27272a;
             display: flex;
@@ -52,8 +52,8 @@
 
         #panelHeader strong {
             color: #f4f4f5;
-            font-size: 14px;
-            letter-spacing: 0.3px;
+            font-size: 13px;
+            letter-spacing: 0px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -71,9 +71,10 @@
             color: #f4f4f5;
             border: 1px solid #3f3f46;
             border-radius: 4px;
-            padding: 6px 10px;
-            font-size: 13px;
+            padding: 6px 6px;
+            font-size: 12px;
             transition: border-color 0.2s;
+            min-width: 0;
         }
 
         #filters input[type=text]:focus,
@@ -113,6 +114,17 @@
 
         .item:hover {
             background: #242429;
+        }
+
+        /* ONGOING event differentiation */
+        .item.item-ongoing {
+            background: #231c2a;
+            border-left: 3px solid #d946ef;
+            padding-left: 3px;
+        }
+
+        .item.item-ongoing:hover {
+            background: #2c2236;
         }
 
         .item label {
@@ -210,7 +222,7 @@
             text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
 
-        /* Rotating ring for upcoming events (CSS only) */
+        /* Rotating ring for upcoming events (CSS only with arrow) */
         .pulse-ring {
             position: absolute;
             top: 16px;
@@ -228,6 +240,20 @@
             pointer-events: none;
             z-index: -1;
             filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+        }
+
+        /* Arrowhead for upcoming ring */
+        .pulse-ring::after {
+            content: '';
+            position: absolute;
+            top: 24px;
+            right: -4px;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 8px solid #ffd700;
+            transform: translateY(-50%) rotate(-15deg);
         }
 
         /* Rotating ring for ongoing events (CSS only) */
@@ -331,7 +357,7 @@
                         <input id="toDate" type="month" style="flex:1" />
                     </div>
                     <div id="filterTypeContainer" class="small"
-                        style="display:flex;flex-direction:column;max-height:160px;overflow:auto;margin-top:2px"></div>
+                        style="display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;max-height:140px;overflow-y:auto;margin-top:2px;padding-right:2px"></div>
                     <input id="filterText" type="text" placeholder="イベント名で絞り込み"
                         style="width: 100%; box-sizing: border-box;" />
                 </div>
@@ -467,6 +493,14 @@
             const q = document.getElementById('filterText').value.trim().toLowerCase();
             const from = monthIndexOf(document.getElementById('fromDate').value);
             const to = monthIndexOf(document.getElementById('toDate').value);
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayEnd = new Date(today);
+            todayEnd.setHours(23, 59, 59, 999);
+            const todayMs = today.getTime();
+            const todayEndMs = todayEnd.getTime();
+
             const visible = [];
             events.forEach(ev => {
                 const title = (getField(ev, 'title') || '').toString(); if (!title) return;
@@ -482,33 +516,22 @@
                 }
                 const evMonth = monthIndexOf(date) || monthIndexOf(getField(ev, 'date'));
                 if (from != null && evMonth != null && evMonth < from) return; if (to != null && evMonth != null && evMonth > to) return;
-                visible.push({ ev, title, date, dateRaw, typeVal, evMonth });
-            });
-            visible.sort((a, b) => { const am = a.evMonth != null ? a.evMonth : (a.date ? monthIndexOf(a.date) : 0); const bm = b.evMonth != null ? b.evMonth : (b.date ? monthIndexOf(b.date) : 0); if (am !== bm) return bm - am; const at = a.date ? a.date.getTime() : 0; const bt = b.date ? b.date.getTime() : 0; return bt - at; });
-
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const todayEnd = new Date(today);
-            todayEnd.setHours(23, 59, 59, 999);
-            const todayMs = today.getTime();
-            const todayEndMs = todayEnd.getTime();
-
-            visible.forEach(item => {
-                const ev = item.ev, title = item.title, date = item.date, dateRaw = item.dateRaw, typeVal = item.typeVal;
 
                 // 開催中 (ongoing) / 開催予定 (upcoming) 判定
                 const toRaw = getField(ev, 'to') || getField(ev, 'To') || getField(ev, '終了日') || '';
                 const toDate = parseDateSafe(toRaw);
 
                 let eventStatus = null; // 'ongoing' | 'upcoming' | null
+                let startMs = 0;
+                let endMs = 0;
                 if (date) {
                     const startDateObj = new Date(date);
                     startDateObj.setHours(0, 0, 0, 0);
-                    const startMs = startDateObj.getTime();
+                    startMs = startDateObj.getTime();
 
                     const endDateObj = toDate ? new Date(toDate) : new Date(date);
                     endDateObj.setHours(23, 59, 59, 999);
-                    const endMs = endDateObj.getTime();
+                    endMs = endDateObj.getTime();
 
                     if (todayMs >= startMs && todayMs <= endMs) {
                         eventStatus = 'ongoing';
@@ -516,6 +539,34 @@
                         eventStatus = 'upcoming';
                     }
                 }
+
+                visible.push({ ev, title, date, dateRaw, typeVal, evMonth, eventStatus, startMs, endMs });
+            });
+
+            // ソート処理: ONGOING（開催中）を最優先で頭に表示
+            visible.sort((a, b) => {
+                const aOngoing = a.eventStatus === 'ongoing' ? 1 : 0;
+                const bOngoing = b.eventStatus === 'ongoing' ? 1 : 0;
+                if (aOngoing !== bOngoing) {
+                    return bOngoing - aOngoing; // ongoing が先頭
+                }
+                if (aOngoing && bOngoing) {
+                    // ONGOING 同士の場合: 終了日が近い順
+                    if (a.endMs !== b.endMs) return a.endMs - b.endMs;
+                    return a.startMs - b.startMs;
+                }
+
+                // それ以外は従来の降順（最新の年月・日付が上）
+                const am = a.evMonth != null ? a.evMonth : (a.date ? monthIndexOf(a.date) : 0);
+                const bm = b.evMonth != null ? b.evMonth : (b.date ? monthIndexOf(b.date) : 0);
+                if (am !== bm) return bm - am;
+                const at = a.date ? a.date.getTime() : 0;
+                const bt = b.date ? b.date.getTime() : 0;
+                return bt - at;
+            });
+
+            visible.forEach(item => {
+                const ev = item.ev, title = item.title, date = item.date, dateRaw = item.dateRaw, typeVal = item.typeVal, eventStatus = item.eventStatus;
 
                 // marker column takes precedence: images/${marker}
                 let iconUrl = null;
@@ -533,7 +584,7 @@
                 const lat = parseFloat((getField(ev, 'lat') || getField(ev, 'latitude') || getField(ev, 'y') || '').toString().replace(/\s+/g, ''));
                 const lng = parseFloat((getField(ev, 'lng') || getField(ev, 'longitude') || getField(ev, 'x') || '').toString().replace(/\s+/g, ''));
                 const row = document.createElement('div');
-                row.className = 'item';
+                row.className = 'item' + (eventStatus === 'ongoing' ? ' item-ongoing' : '');
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = false;
                 const label = document.createElement('label');
                 const detailUrl = escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '');
@@ -561,38 +612,63 @@
                     oms.addMarker(leafletMarker); // OMSにも登録する
                 }
                 markers.push({ leaflet: leafletMarker, data: ev, checkbox: cb });
+                const urlParams = new URLSearchParams(location.search);
+                const pSelected = urlParams.get('selected');
+                const selectedTitles = pSelected ? pSelected.split(';').map(s => { try { return decodeURIComponent(s); } catch (e) { return s; } }) : [];
+
+                if (selectedTitles.includes(title)) {
+                    cb.checked = true;
+                }
+
                 cb.addEventListener('change', () => {
-                    const anyChecked = markers.some(m => m.checkbox.checked);
-                    if (anyChecked) {
-                        // At least one is checked, so show only checked ones.
-                        markers.forEach(m => {
-                            if (m.leaflet) {
-                                if (m.checkbox.checked) {
-                                    if (!map.hasLayer(m.leaflet)) {
-                                        map.addLayer(m.leaflet);
-                                        oms.addMarker(m.leaflet);
-                                    }
-                                } else {
-                                    if (map.hasLayer(m.leaflet)) {
-                                        map.removeLayer(m.leaflet);
-                                        oms.removeMarker(m.leaflet);
-                                    }
-                                }
-                            }
-                        });
-                    } else {
-                        // No checkboxes are checked, so show all.
-                        markers.forEach(m => {
-                            if (m.leaflet) {
-                                if (!map.hasLayer(m.leaflet)) {
-                                    map.addLayer(m.leaflet);
-                                    oms.addMarker(m.leaflet);
-                                }
-                            }
-                        });
-                    }
+                    updateMarkerVisibility();
+                    syncUrlParams();
                 });
             });
+
+            updateMarkerVisibility();
+            syncUrlParams();
+        }
+
+        function updateMarkerVisibility() {
+            const anyChecked = markers.some(m => m.checkbox.checked);
+            markers.forEach(m => {
+                if (m.leaflet) {
+                    const shouldShow = anyChecked ? m.checkbox.checked : true;
+                    if (shouldShow) {
+                        if (!map.hasLayer(m.leaflet)) {
+                            map.addLayer(m.leaflet);
+                            oms.addMarker(m.leaflet);
+                        }
+                    } else {
+                        if (map.hasLayer(m.leaflet)) {
+                            map.removeLayer(m.leaflet);
+                            oms.removeMarker(m.leaflet);
+                        }
+                    }
+                }
+            });
+        }
+
+        function syncUrlParams() {
+            const params = new URLSearchParams();
+            const filterText = document.getElementById('filterText').value.trim();
+            if (filterText) params.set('q', filterText);
+            const fromDate = document.getElementById('fromDate').value;
+            if (fromDate) params.set('from', fromDate);
+            const toDate = document.getElementById('toDate').value;
+            if (toDate) params.set('to', toDate);
+            const checkedTypes = Array.from(document.querySelectorAll('.type-checkbox:checked')).map(cb => cb.value);
+            if (checkedTypes.length > 0) params.set('type', checkedTypes.join(','));
+
+            const checkedTitles = markers.filter(m => m.checkbox && m.checkbox.checked).map(m => getField(m.data, 'title')).filter(Boolean);
+            if (checkedTitles.length > 0) {
+                params.set('selected', checkedTitles.map(encodeURIComponent).join(';'));
+            }
+
+            const newUrl = new URL(location.href);
+            newUrl.search = params.toString();
+            history.replaceState(null, '', newUrl.toString());
         }
 
         function setAllCheckboxes(checked) {
@@ -629,9 +705,12 @@
                     Array.from(typeSet).sort().forEach(t => {
                         const id = 'type_cb_' + t.replace(/[^a-z0-9]/gi, '_');
                         const wrap = document.createElement('label');
-                        wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '6px'; wrap.style.fontSize = '12px';
+                        wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '4px'; wrap.style.fontSize = '11px';
+                        wrap.style.cursor = 'pointer'; wrap.style.minWidth = '0'; wrap.title = t;
                         const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'type-checkbox'; cb.value = t; cb.id = id; cb.checked = false;
-                        const span = document.createElement('span'); span.textContent = t; span.style.fontSize = '12px';
+                        cb.style.margin = '0'; cb.style.flexShrink = '0';
+                        const span = document.createElement('span'); span.textContent = t; span.style.fontSize = '11px';
+                        span.style.whiteSpace = 'nowrap'; span.style.overflow = 'hidden'; span.style.textOverflow = 'ellipsis'; span.style.minWidth = '0';
                         wrap.appendChild(cb); wrap.appendChild(span);
                         container.appendChild(wrap);
                         const urlParams = new URLSearchParams(location.search);
@@ -671,19 +750,9 @@
         document.getElementById('fromDate').addEventListener('change', () => render());
         document.getElementById('toDate').addEventListener('change', () => render());
         document.getElementById('shareBtn').addEventListener('click', () => {
-            const params = new URLSearchParams();
-            const filterText = document.getElementById('filterText').value.trim();
-            if (filterText) params.set('q', filterText);
-            const fromDate = document.getElementById('fromDate').value;
-            if (fromDate) params.set('from', fromDate);
-            const toDate = document.getElementById('toDate').value;
-            if (toDate) params.set('to', toDate);
-            const checkedTypes = Array.from(document.querySelectorAll('.type-checkbox:checked')).map(cb => cb.value);
-            if (checkedTypes.length > 0) params.set('type', checkedTypes.join(','));
-            const newUrl = new URL(location.href);
-            newUrl.search = params.toString();
-            navigator.clipboard.writeText(newUrl.toString()).then(() => {
-                alert('hello 共有用URLをクリップボードにコピーしました。');
+            syncUrlParams();
+            navigator.clipboard.writeText(location.href).then(() => {
+                alert('共有用URLをクリップボードにコピーしました。');
             }, () => {
                 alert('クリップボードへのコピーに失敗しました。');
             });
