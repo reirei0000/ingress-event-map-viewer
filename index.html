@@ -130,6 +130,7 @@
         .item label {
             margin-left: 8px;
             flex: 1;
+            min-width: 0;
             cursor: pointer;
         }
 
@@ -137,6 +138,25 @@
             font-size: 12px;
             color: #a1a1aa;
             margin-top: 2px;
+        }
+
+        .x-search-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #71717a;
+            padding: 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            flex-shrink: 0;
+            text-decoration: none;
+            transition: color 0.15s, background 0.15s, transform 0.15s;
+        }
+
+        .x-search-btn:hover {
+            color: #f4f4f5;
+            background: #27272a;
+            transform: scale(1.08);
         }
 
         /* Buttons */
@@ -403,6 +423,75 @@
             return `${y}/${m}/${dd}`;
         }
 
+        function formatDateISO(d) {
+            if (!d) return '';
+            if (!(d instanceof Date)) d = parseDateSafe(d);
+            if (!d || isNaN(d)) return '';
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${dd}`;
+        }
+
+        function buildXSearchUrl(ev, title, date, toDate, typeVal) {
+            let tags = [];
+            const t = (typeVal || '').toUpperCase();
+            const customTags = (getField(ev, 'tags') || '').toString().trim();
+
+            if (customTags) {
+                // tags列が存在する場合: スペースやカンマ区切りのタグを展開（#が無ければ補完）
+                const parts = customTags.split(/[,\s]+/).map(p => p.trim()).filter(Boolean);
+                tags = parts.map(p => p.startsWith('#') ? p : '#' + p);
+            } else {
+                // tags列がない場合: 従来のロジックでタグを生成
+                if (t.includes('FIRST SATURDAY') || t.includes('VFS')) {
+                    tags.push('#ingressfs');
+                } else if (t.includes('MISSION DAY') || t.includes('MISSIONDAY')) {
+                    tags.push('#missionday');
+                } else if (t.includes('XM ANOMALY') || t.includes('ANOMALY')) {
+                    tags.push('#xmanomaly');
+                } else if (t.includes('NL-1331') || t.includes('NL1331')) {
+                    tags.push('#NL1331');
+                }
+
+                // タイトルからハッシュタグを作成
+                // 括弧とその中身を除去 (例: "MD八戸 (東北)" -> "MD八戸")
+                // 空白やハイフン等の記号を除去
+                let cleanTitle = (title || '')
+                    .replace(/[\(（][^\)）]*[\)）]/g, '')
+                    .replace(/[\s\-_+・#＃]/g, '')
+                    .trim();
+
+                if (cleanTitle) {
+                    const titleTag = '#' + cleanTitle;
+                    if (!tags.some(tag => tag.toLowerCase() === titleTag.toLowerCase())) {
+                        tags.push(titleTag);
+                    }
+                }
+            }
+
+            const isFS = t.includes('FIRST SATURDAY') || t.includes('VFS');
+            const beforeDays = isFS ? 14 : 30; // FSは毎月開催のため14日前、MD/アノマリー等は事前告知・グッズ等を考慮し30日前
+            const afterDays = 15; // Xのuntil:YYYY-MM-DDは指定日0:00(UTC)まで(前日まで)の仕様のため、14日後を網羅できるよう+15日
+
+            const queryParts = [...tags];
+            if (date) {
+                const sinceDate = new Date(date);
+                sinceDate.setDate(sinceDate.getDate() - beforeDays);
+                const sinceStr = formatDateISO(sinceDate);
+                if (sinceStr) queryParts.push(`since:${sinceStr}`);
+
+                const untilBase = toDate || date;
+                const untilDate = new Date(untilBase);
+                untilDate.setDate(untilDate.getDate() + afterDays);
+                const untilStr = formatDateISO(untilDate);
+                if (untilStr) queryParts.push(`until:${untilStr}`);
+            }
+
+            const q = queryParts.join(' ');
+            return `https://x.com/search?q=${encodeURIComponent(q)}&src=typed_query&f=live`;
+        }
+
         function parseDateSafe(s) {
             if (!s) return null;
             // YYYY-MM is parsed as UTC, which can cause timezone issues.
@@ -524,7 +613,7 @@
                     }
                 }
 
-                visible.push({ ev, title, date, dateRaw, typeVal, evMonth, eventStatus, startMs, endMs });
+                visible.push({ ev, title, date, dateRaw, toDate, typeVal, evMonth, eventStatus, startMs, endMs });
             });
 
             // ソート処理: ONGOING（開催中）を最優先で頭に表示
@@ -550,7 +639,8 @@
             });
 
             visible.forEach(item => {
-                const ev = item.ev, title = item.title, date = item.date, dateRaw = item.dateRaw, typeVal = item.typeVal, eventStatus = item.eventStatus;
+                const ev = item.ev, title = item.title, date = item.date, dateRaw = item.dateRaw, toDate = item.toDate, typeVal = item.typeVal, eventStatus = item.eventStatus;
+                const xSearchUrl = buildXSearchUrl(ev, title, date, toDate, typeVal);
 
                 // marker column takes precedence: images/${marker}
                 let iconUrl = null;
@@ -584,13 +674,24 @@
                 row.appendChild(cb);
                 if (iconUrl) { const img = document.createElement('img'); img.src = iconUrl; img.alt = ''; img.style.width = '20px'; img.style.height = '20px'; img.style.objectFit = 'contain'; img.style.marginLeft = '8px'; row.appendChild(img); }
                 row.appendChild(label);
+
+                const xBtn = document.createElement('a');
+                xBtn.href = xSearchUrl;
+                xBtn.target = '_blank';
+                xBtn.rel = 'noopener noreferrer';
+                xBtn.className = 'x-search-btn';
+                xBtn.title = 'X(Twitter)で検索';
+                xBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+                xBtn.addEventListener('click', (e) => e.stopPropagation());
+                row.appendChild(xBtn);
+
                 list.appendChild(row);
                 let leafletMarker = null;
                 if (!isNaN(lat) && !isNaN(lng)) {
                     const titleText = getField(ev, 'title') || '';
                     const icon = makeIcon(iconUrl, titleText, eventStatus);
                     leafletMarker = L.marker([lat, lng], icon ? { icon } : {});
-                    const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a></div></div>`;
+                    const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div style="margin-top:6px;display:flex;align-items:center;gap:12px;"><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a><a href="${escapeAttr(xSearchUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;color:#38bdf8;text-decoration:none;"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>X検索</span></a></div></div>`;
                     leafletMarker.popupHtml = popupHtml;
                     map.addLayer(leafletMarker);
                     oms.addMarker(leafletMarker); // OMSにも登録する
