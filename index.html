@@ -345,6 +345,97 @@
             border: 1px solid #3f3f46;
             backdrop-filter: blur(4px);
         }
+
+        /* X Search Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+            animation: fadeIn 0.15s ease-out;
+        }
+
+        .modal-content {
+            background: #1e1e24;
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+            animation: slideUp 0.15s ease-out;
+        }
+
+        .modal-header {
+            padding: 12px 16px;
+            background: #27272a;
+            border-bottom: 1px solid #3f3f46;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #f4f4f5;
+            font-size: 14px;
+        }
+
+        .modal-close-btn {
+            background: transparent;
+            border: none;
+            color: #a1a1aa;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            line-height: 1;
+        }
+
+        .modal-close-btn:hover {
+            color: #ffffff;
+            background: #3f3f46;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .modal-search-btn {
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: #f4f4f5;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .modal-search-btn:hover {
+            background: #323238;
+            border-color: #38bdf8;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(12px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 
@@ -375,6 +466,44 @@
         </div>
         <div id="map"></div>
         <button id="openPanelBtn" style="display:none">メニュー</button>
+    </div>
+
+    <!-- X Search Options Modal -->
+    <div id="xSearchModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <strong>X (Twitter) 検索</strong>
+                </div>
+                <button id="closeXModalBtn" class="modal-close-btn" title="閉じる">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="xModalEventInfo" style="font-size:13px;color:#f4f4f5;margin-bottom:12px;font-weight:bold;"></div>
+                
+                <label style="font-size:11px;color:#a1a1aa;display:block;margin-bottom:4px;">検索キーワード（編集可能）:</label>
+                <input id="xModalKeywords" type="text" style="width:100%;box-sizing:border-box;background:#18181b;color:#f4f4f5;border:1px solid #3f3f46;border-radius:4px;padding:8px;font-size:13px;margin-bottom:14px;outline:none;" />
+
+                <div style="font-size:12px;color:#e4e4e7;margin-bottom:8px;font-weight:bold;">検索方法を選択:</div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button id="xModalPeriodBtn" class="modal-search-btn">
+                        <div style="font-weight:bold;display:flex;align-items:center;gap:6px;color:#38bdf8;">
+                            <span>📅 期間を絞って検索</span>
+                        </div>
+                        <div id="xModalPeriodDesc" style="font-size:11px;color:#a1a1aa;margin-top:4px;line-height:1.4;"></div>
+                    </button>
+
+                    <button id="xModalAllBtn" class="modal-search-btn">
+                        <div style="font-weight:bold;display:flex;align-items:center;gap:6px;color:#ffd700;">
+                            <span>🌐 全期間で検索</span>
+                        </div>
+                        <div style="font-size:11px;color:#a1a1aa;margin-top:4px;line-height:1.4;">期間指定なし（古いイベントやヒットしない場合におすすめ）</div>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -438,7 +567,7 @@
             return `${y}-${m}-${dd}`;
         }
 
-        function buildXSearchUrl(ev, title, date, toDate, typeVal) {
+        function getXSearchTags(ev, title, typeVal) {
             let tags = [];
             const t = (typeVal || '').toUpperCase();
             const customTags = (getField(ev, 'tags') || '').toString().trim();
@@ -474,27 +603,86 @@
                     }
                 }
             }
+            return tags;
+        }
 
+        function getXSearchDateInfo(date, toDate, typeVal) {
+            if (!date) return null;
+            const t = (typeVal || '').toUpperCase();
             const isFS = t.includes('FIRST SATURDAY') || t.includes('VFS');
             const beforeDays = isFS ? 14 : 30; // FSは毎月開催のため14日前、MD/アノマリー等は事前告知・グッズ等を考慮し30日前
             const afterDays = 15; // Xのuntil:YYYY-MM-DDは指定日0:00(UTC)まで(前日まで)の仕様のため、14日後を網羅できるよう+15日
 
-            const queryParts = [...tags];
-            if (date) {
-                const sinceDate = new Date(date);
-                sinceDate.setDate(sinceDate.getDate() - beforeDays);
-                const sinceStr = formatDateISO(sinceDate);
-                if (sinceStr) queryParts.push(`since:${sinceStr}`);
+            const sinceDate = new Date(date);
+            sinceDate.setDate(sinceDate.getDate() - beforeDays);
+            const sinceStr = formatDateISO(sinceDate);
 
-                const untilBase = toDate || date;
-                const untilDate = new Date(untilBase);
-                untilDate.setDate(untilDate.getDate() + afterDays);
-                const untilStr = formatDateISO(untilDate);
-                if (untilStr) queryParts.push(`until:${untilStr}`);
+            const untilBase = toDate || date;
+            const untilDate = new Date(untilBase);
+            untilDate.setDate(untilDate.getDate() + afterDays);
+            const untilStr = formatDateISO(untilDate);
+
+            return {
+                sinceStr,
+                untilStr,
+                label: isFS ? '前後2週間' : '1ヶ月前〜2週間後'
+            };
+        }
+
+        function makeXSearchUrl(query) {
+            return `https://x.com/search?q=${encodeURIComponent(query)}&src=typed_query&f=live`;
+        }
+
+        function openXSearchModal(ev, title, date, toDate, typeVal) {
+            const modal = document.getElementById('xSearchModal');
+            if (!modal) return;
+
+            const tags = getXSearchTags(ev, title, typeVal);
+            const dateInfo = getXSearchDateInfo(date, toDate, typeVal);
+
+            const eventInfoEl = document.getElementById('xModalEventInfo');
+            const keywordsInput = document.getElementById('xModalKeywords');
+            const periodBtn = document.getElementById('xModalPeriodBtn');
+            const periodDesc = document.getElementById('xModalPeriodDesc');
+            const allBtn = document.getElementById('xModalAllBtn');
+
+            const dateStr = formatDate(date) || getField(ev, 'date') || '';
+            eventInfoEl.textContent = `イベント: ${title || '無題'}${dateStr ? ' (' + dateStr + ')' : ''}`;
+            keywordsInput.value = tags.join(' ');
+
+            if (dateInfo) {
+                periodBtn.style.display = 'flex';
+                periodDesc.textContent = `${dateInfo.label}（${dateInfo.sinceStr} 〜 ${dateInfo.untilStr}）`;
+                periodBtn.onclick = () => {
+                    const kw = keywordsInput.value.trim();
+                    const query = `${kw} since:${dateInfo.sinceStr} until:${dateInfo.untilStr}`.trim();
+                    window.open(makeXSearchUrl(query), '_blank');
+                    closeXSearchModal();
+                };
+            } else {
+                periodBtn.style.display = 'none';
             }
 
-            const q = queryParts.join(' ');
-            return `https://x.com/search?q=${encodeURIComponent(q)}&src=typed_query&f=live`;
+            allBtn.onclick = () => {
+                const kw = keywordsInput.value.trim();
+                window.open(makeXSearchUrl(kw), '_blank');
+                closeXSearchModal();
+            };
+
+            keywordsInput.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    if (dateInfo) periodBtn.click();
+                    else allBtn.click();
+                }
+            };
+
+            modal.style.display = 'flex';
+            setTimeout(() => keywordsInput.focus(), 50);
+        }
+
+        function closeXSearchModal() {
+            const modal = document.getElementById('xSearchModal');
+            if (modal) modal.style.display = 'none';
         }
 
         function parseDateSafe(s) {
@@ -643,9 +831,9 @@
                 return bt - at;
             });
 
-            visible.forEach(item => {
+            currentVisibleItems = visible;
+            visible.forEach((item, itemIdx) => {
                 const ev = item.ev, title = item.title, date = item.date, dateRaw = item.dateRaw, toDate = item.toDate, typeVal = item.typeVal, eventStatus = item.eventStatus;
-                const xSearchUrl = buildXSearchUrl(ev, title, date, toDate, typeVal);
 
                 // marker column takes precedence: images/${marker}
                 let iconUrl = null;
@@ -680,14 +868,15 @@
                 if (iconUrl) { const img = document.createElement('img'); img.src = iconUrl; img.alt = ''; img.style.width = '20px'; img.style.height = '20px'; img.style.objectFit = 'contain'; img.style.marginLeft = '8px'; row.appendChild(img); }
                 row.appendChild(label);
 
-                const xBtn = document.createElement('a');
-                xBtn.href = xSearchUrl;
-                xBtn.target = '_blank';
-                xBtn.rel = 'noopener noreferrer';
+                const xBtn = document.createElement('button');
+                xBtn.type = 'button';
                 xBtn.className = 'x-search-btn';
                 xBtn.title = 'X(Twitter)で検索';
                 xBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
-                xBtn.addEventListener('click', (e) => e.stopPropagation());
+                xBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openXSearchModal(ev, title, date, toDate, typeVal);
+                });
                 row.appendChild(xBtn);
 
                 list.appendChild(row);
@@ -696,7 +885,7 @@
                     const titleText = getField(ev, 'title') || '';
                     const icon = makeIcon(iconUrl, titleText, eventStatus);
                     leafletMarker = L.marker([lat, lng], icon ? { icon } : {});
-                    const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div style="margin-top:6px;display:flex;align-items:center;gap:12px;"><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a><a href="${escapeAttr(xSearchUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;color:#38bdf8;text-decoration:none;"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>X検索</span></a></div></div>`;
+                    const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div style="margin-top:6px;display:flex;align-items:center;gap:12px;"><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a><a href="javascript:void(0)" onclick="window.openEventXModal(${itemIdx})" style="display:inline-flex;align-items:center;gap:4px;color:#38bdf8;text-decoration:none;"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>X検索</span></a></div></div>`;
                     leafletMarker.popupHtml = popupHtml;
                     map.addLayer(leafletMarker);
                     oms.addMarker(leafletMarker); // OMSにも登録する
@@ -852,6 +1041,23 @@
         // check/clear removed per layout change
         loadCsv(defaultCsv);
         window.render = render; window.loadCsv = loadCsv; window.events = events; window.map = map;
+
+        window.openEventXModal = function(idx) {
+            const it = currentVisibleItems[idx];
+            if (it) {
+                openXSearchModal(it.ev, it.title, it.date, it.toDate, it.typeVal);
+            }
+        };
+
+        const closeXBtn = document.getElementById('closeXModalBtn');
+        if (closeXBtn) closeXBtn.addEventListener('click', closeXSearchModal);
+        const xModal = document.getElementById('xSearchModal');
+        if (xModal) xModal.addEventListener('click', (e) => {
+            if (e.target === xModal) closeXSearchModal();
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeXSearchModal();
+        });
     </script>
     <div id="disclaimer">
         このサイトは、Ingressファンによる非公式の情報サイトです（<a href="https://support.ingress.com/hc/ja/articles/41140416541851-%E3%83%96%E3%83%A9%E3%83%B3%E3%83%89-%E3%83%95%E3%82%A1%E3%83%B3-%E3%82%B5%E3%82%A4%E3%83%88-%E3%82%AC%E3%82%A4%E3%83%89%E3%83%A9%E3%82%A4%E3%83%B3" target="_blank" rel="noopener noreferrer" style="color:#38bdf8;text-decoration:underline;">ブランド・ファン・サイト・ガイドライン</a>に準拠）。<br>
