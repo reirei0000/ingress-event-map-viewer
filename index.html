@@ -8,7 +8,7 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23121215'/><polygon points='50,10 85,30 85,70 50,90 15,70 15,30' stroke='%2338bdf8' stroke-width='3.5' fill='none' opacity='0.85'/><circle cx='50' cy='50' r='33' stroke='%2338bdf8' stroke-width='1.5' stroke-dasharray='5,4' fill='none' opacity='0.45'/><path d='M50 24 C38 24 29 33 29 45 C29 61 50 75 50 75 C50 75 71 61 71 45 C71 33 62 24 50 24 Z' fill='%23ffd700'/><circle cx='50' cy='43' r='8' fill='%23121215'/><circle cx='50' cy='43' r='4' fill='%2338bdf8'/></svg>"
         type="image/svg+xml" />
-    <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         /* Theme Variables */
         :root,
@@ -387,81 +387,53 @@
             }
         }
 
-        /* Mapbox GL Popups Theme Override */
-        .mapboxgl-popup-content {
+        /* Leaflet Popups Theme Override */
+        .leaflet-popup-content-wrapper,
+        .leaflet-popup-tip {
             background: var(--bg-modal) !important;
             color: var(--text-secondary) !important;
             border: 1px solid var(--border-base);
-            border-radius: 8px;
             box-shadow: var(--shadow-dropdown) !important;
-            padding: 12px 14px;
         }
 
-        .mapboxgl-popup-tip {
-            border-top-color: var(--bg-modal) !important;
-            border-bottom-color: var(--bg-modal) !important;
-        }
-
-        .mapboxgl-popup-close-button {
+        .leaflet-container a.leaflet-popup-close-button {
             color: var(--text-muted) !important;
-            padding: 4px 6px !important;
-            font-size: 16px;
-            border-radius: 0 8px 0 4px;
-            outline: none;
+            padding: 4px 4px 0 0 !important;
         }
 
-        .mapboxgl-popup-close-button:hover {
+        .leaflet-container a.leaflet-popup-close-button:hover {
             color: var(--text-primary) !important;
-            background: var(--bg-btn-hover);
         }
 
-        .mapboxgl-popup-content a {
+        .leaflet-popup-content a {
             color: var(--accent-blue) !important;
         }
 
-        /* Mapbox GL Navigation Controls Theme Override */
-        .mapboxgl-ctrl-group {
-            background: var(--bg-panel) !important;
-            border: 1px solid var(--border-base) !important;
+        /* Leaflet Controls Theme Override */
+        .leaflet-control-zoom {
+            border: none !important;
             box-shadow: var(--shadow-control) !important;
             border-radius: 4px;
             overflow: hidden;
         }
 
-        .mapboxgl-ctrl-group button {
+        .leaflet-control-zoom a {
             background-color: var(--bg-panel) !important;
-            border-bottom: 1px solid var(--border-subtle) !important;
-            width: 30px !important;
-            height: 30px !important;
-            transition: background 0.2s;
+            color: var(--text-primary) !important;
+            border-color: var(--border-base) !important;
+            transition: background 0.2s, color 0.2s;
         }
 
-        .mapboxgl-ctrl-group button:last-child {
-            border-bottom: none !important;
-        }
-
-        .mapboxgl-ctrl-group button:hover {
+        .leaflet-control-zoom a:hover {
             background-color: var(--bg-item-hover) !important;
+            color: var(--text-primary) !important;
         }
 
-        .mapboxgl-ctrl-icon {
-            filter: invert(1) brightness(0.9);
-        }
-
-        [data-theme="light"] .mapboxgl-ctrl-icon {
-            filter: none;
-        }
-
-        /* Map Style & Projection Control (Top-Right) */
-        .mapboxgl-ctrl-top-right {
-            overflow: visible !important;
-        }
-
-        .mapboxgl-ctrl-style-switcher {
+        /* Map Style Control (Top-Right) */
+        .leaflet-control-style-switcher {
             position: relative;
-            overflow: visible !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin-bottom: 10px !important;
+            margin-bottom: 8px !important;
         }
 
         .map-style-toggle-btn {
@@ -494,21 +466,20 @@
 
         .map-style-dropdown {
             position: absolute;
-            top: 36px;
-            right: 0;
+            top: 0;
+            right: 36px;
             background: var(--bg-dropdown);
             border: 1px solid var(--border-base);
             border-radius: 8px;
             box-shadow: var(--shadow-dropdown);
-            min-width: 190px;
-            padding: 8px;
+            min-width: 165px;
+            padding: 6px;
             display: flex;
             flex-direction: column;
             gap: 2px;
             z-index: 1000;
             backdrop-filter: blur(8px);
             animation: fadeInScale 0.15s ease-out;
-            pointer-events: auto;
         }
 
         .map-style-dropdown-title {
@@ -519,47 +490,6 @@
             border-bottom: 1px solid var(--border-subtle);
             margin-bottom: 2px;
             letter-spacing: 0.5px;
-        }
-
-        .map-style-dropdown-divider {
-            height: 1px;
-            background: var(--border-subtle);
-            margin: 6px 2px;
-        }
-
-        .map-proj-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4px;
-            padding: 2px;
-        }
-
-        .map-proj-btn {
-            background: var(--bg-btn);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-base);
-            border-radius: 4px;
-            padding: 6px 4px;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            white-space: nowrap;
-        }
-
-        .map-proj-btn:hover {
-            background: var(--bg-btn-hover);
-            color: var(--text-primary);
-        }
-
-        .map-proj-btn.is-active {
-            background: var(--bg-dropdown-active);
-            border-color: var(--accent-blue);
-            color: var(--accent-blue);
-            font-weight: 600;
         }
 
         .map-style-item {
@@ -631,31 +561,6 @@
 
         .map-style-item.is-selected .check {
             opacity: 1;
-        }
-
-        /* Spiderfier Lines SVG Overlay */
-        .spider-leg-svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .spider-leg-line {
-            stroke: var(--accent-gold);
-            stroke-width: 1.5;
-            stroke-dasharray: 4, 3;
-            opacity: 0.9;
-            transition: opacity 0.2s ease;
-        }
-
-        .spider-center-dot {
-            fill: var(--accent-gold);
-            r: 4;
-            opacity: 0.9;
         }
 
         @keyframes fadeInScale {
@@ -846,13 +751,13 @@
         </div>
     </div>
 
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/OverlappingMarkerSpiderfier-Leaflet/0.2.6/oms.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script>
         const defaultCsv = 'https://docs.google.com/spreadsheets/d/1sxGS5uA1mGthS9wLm0APub0qzjCiJ0YoSPfsllXXRb0/export?format=csv&gid=165380856';
-        const mapboxAccessToken = 'pk.eyJ1IjoicmVpMDAwMCIsImEiOiJjbXVid293MG8xdGVrMndzMjFjbTN4a3ZvIn0.5Rxy58p-Gx55XGuWUpda4A';
-        mapboxgl.accessToken = mapboxAccessToken;
-
+        const map = L.map('map', { zoomControl: false }).setView([35.68, 139.76], 5);
+        
         // 地図スタイル設定
         const MAP_STYLES = {
             dark: {
@@ -860,7 +765,7 @@
                 nameJa: 'ダーク',
                 nameEn: 'Dark',
                 icon: '🌙',
-                styleUrl: 'mapbox://styles/mapbox/dark-v11',
+                mapboxId: 'mapbox/dark-v11',
                 theme: 'dark'
             },
             light: {
@@ -868,7 +773,7 @@
                 nameJa: 'ライト',
                 nameEn: 'Light',
                 icon: '☀️',
-                styleUrl: 'mapbox://styles/mapbox/light-v11',
+                mapboxId: 'mapbox/light-v11',
                 theme: 'light'
             },
             streets: {
@@ -876,7 +781,7 @@
                 nameJa: '標準',
                 nameEn: 'Streets',
                 icon: '🗺️',
-                styleUrl: 'mapbox://styles/mapbox/streets-v12',
+                mapboxId: 'mapbox/streets-v12',
                 theme: 'light'
             },
             satellite: {
@@ -884,114 +789,49 @@
                 nameJa: '衛星写真',
                 nameEn: 'Satellite',
                 icon: '🛰️',
-                styleUrl: 'mapbox://styles/mapbox/satellite-streets-v12',
+                mapboxId: 'mapbox/satellite-streets-v12',
                 theme: 'dark'
             }
         };
 
-        // 初期設定値の取得 (URLパラメータ -> localStorage -> デフォルト)
-        const initialParams = new URLSearchParams(location.search);
+        const mapboxAccessToken = 'pk.eyJ1IjoicmVpMDAwMCIsImEiOiJjbXVid293MG8xdGVrMndzMjFjbTN4a3ZvIn0.5Rxy58p-Gx55XGuWUpda4A';
+        const tileLayers = {};
         let currentStyleKey = 'dark';
-        const urlStyle = initialParams.get('style');
-        if (urlStyle && MAP_STYLES[urlStyle.toLowerCase()]) {
-            currentStyleKey = urlStyle.toLowerCase();
-        } else {
-            try {
-                const saved = localStorage.getItem('ingress_map_style');
-                if (saved && MAP_STYLES[saved]) currentStyleKey = saved;
-            } catch (e) { }
-        }
+        let currentTileLayer = null;
 
-        let currentProjection = 'globe'; // デフォルトは球形 (Globe)
-        const urlProj = initialParams.get('proj');
-        if (urlProj === 'mercator' || urlProj === 'globe') {
-            currentProjection = urlProj;
-        } else {
-            try {
-                const savedProj = localStorage.getItem('ingress_map_proj');
-                if (savedProj === 'mercator' || savedProj === 'globe') currentProjection = savedProj;
-            } catch (e) { }
-        }
-
-        document.documentElement.setAttribute('data-theme', MAP_STYLES[currentStyleKey].theme);
-
-        // Mapbox 地図初期化
-        const map = new mapboxgl.Map({
-            container: 'map',
-            style: MAP_STYLES[currentStyleKey].styleUrl,
-            center: [139.76, 35.68], // [lng, lat]
-            zoom: 3.8,
-            projection: currentProjection
-        });
-
-        // ズーム・回転・コンパスコントロール（右上）
-        map.addControl(new mapboxgl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
-
-        // 大気圏・宇宙空間の演出（Fog）
-        function updateFog(theme) {
-            if (!map) return;
-            try {
-                if (theme === 'dark') {
-                    map.setFog({
-                        color: 'rgba(24, 24, 27, 0.4)',
-                        'high-color': 'rgba(56, 189, 248, 0.25)',
-                        'horizon-blend': 0.04,
-                        'space-color': 'rgb(10, 10, 14)',
-                        'star-intensity': 0.8
-                    });
-                } else {
-                    map.setFog({
-                        color: 'rgba(248, 250, 252, 0.6)',
-                        'high-color': 'rgba(186, 230, 253, 0.35)',
-                        'horizon-blend': 0.03,
-                        'space-color': 'rgb(241, 245, 249)',
-                        'star-intensity': 0.0
-                    });
-                }
-            } catch (e) { }
-        }
-
-        map.on('style.load', () => {
-            map.setProjection(currentProjection);
-            updateFog(MAP_STYLES[currentStyleKey].theme);
-        });
-
-        // 投影法（球形 / 平面）の切り替え
-        function setProjection(projKey, updateUrl = true) {
-            if (projKey !== 'globe' && projKey !== 'mercator') projKey = 'globe';
-            currentProjection = projKey;
-            map.setProjection(projKey);
-
-            try {
-                localStorage.setItem('ingress_map_proj', projKey);
-            } catch (e) { }
-
-            document.querySelectorAll('.map-proj-btn').forEach(btn => {
-                btn.classList.toggle('is-active', btn.dataset.proj === projKey);
-            });
-
-            if (spiderfier) {
-                spiderfier.updateLines();
+        function getTileLayer(styleKey) {
+            if (!tileLayers[styleKey]) {
+                const conf = MAP_STYLES[styleKey] || MAP_STYLES.dark;
+                tileLayers[styleKey] = L.tileLayer(`https://api.mapbox.com/styles/v1/${conf.mapboxId}/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}`, {
+                    tileSize: 512,
+                    zoomOffset: -1,
+                    maxZoom: 19,
+                    attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>'
+                });
             }
-
-            if (updateUrl && typeof syncUrlParams === 'function') {
-                syncUrlParams();
-            }
+            return tileLayers[styleKey];
         }
 
-        // 地図スタイルの切り替え
         function setMapStyle(styleKey, updateUrl = true) {
             if (!MAP_STYLES[styleKey]) styleKey = 'dark';
             const styleConfig = MAP_STYLES[styleKey];
 
+            if (currentTileLayer && map.hasLayer(currentTileLayer)) {
+                map.removeLayer(currentTileLayer);
+            }
+            currentTileLayer = getTileLayer(styleKey);
+            currentTileLayer.addTo(map);
+            if (currentTileLayer.bringToBack) {
+                currentTileLayer.bringToBack();
+            }
+
             currentStyleKey = styleKey;
             document.documentElement.setAttribute('data-theme', styleConfig.theme);
-            map.setStyle(styleConfig.styleUrl);
-
             try {
                 localStorage.setItem('ingress_map_style', styleKey);
             } catch (e) { }
 
+            // UI上のチェック状態を更新
             document.querySelectorAll('.map-style-item').forEach(el => {
                 el.classList.toggle('is-selected', el.dataset.styleKey === styleKey);
             });
@@ -1001,232 +841,18 @@
             }
         }
 
-        // Mapbox GL JS 用 Spiderfier クラス（同地点重なり展開）
-        class MapboxSpiderfier {
-            constructor(mapInstance) {
-                this.map = mapInstance;
-                this.markers = [];
-                this.spiderfied = null;
-                this.activePopup = null;
-                this.svg = null;
-                this.initSvg();
-
-                const update = () => this.updateLines();
-                this.map.on('move', update);
-                this.map.on('zoom', update);
-                this.map.on('pitch', update);
-                this.map.on('rotate', update);
-
-                this.map.on('zoomstart', () => this.unspiderfy(true));
-                this.map.on('movestart', (e) => {
-                    if (e.originalEvent) this.unspiderfy(true);
-                });
-
-                this.map.on('click', () => {
-                    this.unspiderfy(true);
-                });
-            }
-
-            initSvg() {
-                try {
-                    const container = (this.map.getContainer && this.map.getContainer());
-                    if (!container) {
-                        this.map.once('load', () => this.initSvg());
-                        return;
-                    }
-                    if (!this.svg) {
-                        this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                        this.svg.setAttribute('class', 'spider-leg-svg');
-                        this.svg.style.position = 'absolute';
-                        this.svg.style.top = '0';
-                        this.svg.style.left = '0';
-                        this.svg.style.width = '100%';
-                        this.svg.style.height = '100%';
-                        this.svg.style.pointerEvents = 'none';
-                        this.svg.style.zIndex = '5';
-                        container.appendChild(this.svg);
-                    }
-                } catch (e) {
-                    this.map.once('load', () => this.initSvg());
-                }
-            }
-
-            clear() {
-                this.unspiderfy(true);
-                this.markers.forEach(m => {
-                    if (m.marker) m.marker.remove();
-                });
-                this.markers = [];
-            }
-
-            addMarker(item) {
-                this.markers.push(item);
-                item.el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.handleMarkerClick(item);
-                });
-            }
-
-            handleMarkerClick(clickedItem) {
-                // すでに展開中のマーカー自身をクリックされた場合はポップアップを開く
-                if (this.spiderfied && this.spiderfied.items.some(it => it.item === clickedItem)) {
-                    this.openPopup(clickedItem);
-                    return;
-                }
-
-                // 表示中のマーカーから、同地点・近傍マーカーを検索
-                const visible = this.markers.filter(m => m.marker && m.el.style.display !== 'none');
-                const centerPt = this.map.project([clickedItem.lng, clickedItem.lat]);
-                const zoom = this.map.getZoom();
-
-                const overlapping = visible.filter(m => {
-                    // 同一地点（緯度経度差が極めて小さい）
-                    const isSameCoord = (Math.abs(m.lat - clickedItem.lat) < 0.0008 && Math.abs(m.lng - clickedItem.lng) < 0.0008);
-                    if (isSameCoord) return true;
-                    // ズームイン時（zoom >= 8）は画面上のピクセル距離で判定
-                    if (zoom >= 8) {
-                        const pt = this.map.project([m.lng, m.lat]);
-                        return Math.hypot(pt.x - centerPt.x, pt.y - centerPt.y) < 22;
-                    }
-                    return false;
-                });
-
-                if (overlapping.length > 1) {
-                    this.spiderfy(clickedItem, overlapping);
-                } else {
-                    this.unspiderfy(false);
-                    this.openPopup(clickedItem);
-                }
-            }
-
-            spiderfy(centerItem, items) {
-                this.unspiderfy(false);
-
-                const count = items.length;
-                const centerLngLat = [centerItem.lng, centerItem.lat];
-                const centerPt = this.map.project(centerLngLat);
-
-                const spiderItems = items.map((item, i) => {
-                    let dx, dy;
-                    if (count <= 8) {
-                        // 単一円環配置（均等）
-                        const radius = Math.max(45, 18 + count * 6);
-                        const angle = (2 * Math.PI / count) * i - Math.PI / 2;
-                        dx = radius * Math.cos(angle);
-                        dy = radius * Math.sin(angle);
-                    } else {
-                        // スパイラル（渦巻き状）配置: マーカーが多数ある場合に美しくコンパクトに配置
-                        const angle = i * 0.75 + Math.PI / 2;
-                        const radius = 32 + i * 7.5;
-                        dx = radius * Math.cos(angle);
-                        dy = radius * Math.sin(angle);
-                    }
-
-                    const targetPt = { x: centerPt.x + dx, y: centerPt.y + dy };
-                    const targetLngLat = this.map.unproject(targetPt);
-
-                    item.marker.setLngLat(targetLngLat);
-                    item.el.style.zIndex = '100';
-
-                    return {
-                        item,
-                        origLngLat: [item.lng, item.lat],
-                        targetLngLat
-                    };
-                });
-
-                this.spiderfied = {
-                    centerLngLat,
-                    centerItem,
-                    items: spiderItems
-                };
-
-                this.updateLines();
-            }
-
-            unspiderfy(closePopup = false) {
-                if (!this.spiderfied) {
-                    if (closePopup && this.activePopup) {
-                        this.activePopup.remove();
-                        this.activePopup = null;
-                    }
-                    return;
-                }
-
-                this.spiderfied.items.forEach(({ item, origLngLat }) => {
-                    item.marker.setLngLat(origLngLat);
-                    item.el.style.zIndex = '';
-                });
-
-                this.spiderfied = null;
-                if (this.svg) this.svg.innerHTML = '';
-
-                if (closePopup && this.activePopup) {
-                    this.activePopup.remove();
-                    this.activePopup = null;
-                }
-            }
-
-            updateLines() {
-                if (!this.svg) this.initSvg();
-                if (!this.spiderfied) {
-                    if (this.svg) this.svg.innerHTML = '';
-                    return;
-                }
-
-                const container = this.map.getContainer();
-                const width = container.clientWidth;
-                const height = container.clientHeight;
-                this.svg.setAttribute('width', width);
-                this.svg.setAttribute('height', height);
-                this.svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-
-                const centerPt = this.map.project(this.spiderfied.centerLngLat);
-                let html = `<circle cx="${centerPt.x}" cy="${centerPt.y}" r="5" fill="#ffd700" stroke="#000" stroke-width="1.5" opacity="0.95" class="spider-center-dot" />`;
-
-                this.spiderfied.items.forEach(({ item }) => {
-                    const currentLngLat = item.marker.getLngLat();
-                    const pt = this.map.project(currentLngLat);
-                    html += `<line x1="${centerPt.x}" y1="${centerPt.y}" x2="${pt.x}" y2="${pt.y}" stroke="#ffd700" stroke-width="2" stroke-dasharray="4,3" opacity="0.95" class="spider-leg-line" />`;
-                });
-
-                if (this.svg) this.svg.innerHTML = html;
-            }
-
-            openPopup(item) {
-                if (!item.popupHtml) return;
-                if (this.activePopup) {
-                    this.activePopup.remove();
-                    this.activePopup = null;
-                }
-
-                this.activePopup = new mapboxgl.Popup({
-                    offset: [0, -32],
-                    closeButton: true,
-                    closeOnClick: false,
-                    maxWidth: '300px'
-                })
-                    .setLngLat(item.marker.getLngLat())
-                    .setHTML(item.popupHtml)
-                    .addTo(this.map);
-            }
-        }
-
-        const spiderfier = new MapboxSpiderfier(map);
-
-        // 地図スタイル＆投影法切り替えコントロール
-        class StyleSwitcherControl {
-            onAdd(mapInstance) {
-                this._map = mapInstance;
-                const container = document.createElement('div');
-                container.className = 'mapboxgl-ctrl mapboxgl-ctrl-style-switcher';
+        // 地図スタイル切り替えコントロール（右上・ズームボタンの上）
+        const StyleSwitcherControl = L.Control.extend({
+            options: { position: 'topright' },
+            onAdd: function () {
+                const container = L.DomUtil.create('div', 'leaflet-control leaflet-control-style-switcher');
 
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.id = 'mapStyleBtn';
                 btn.className = 'map-style-toggle-btn';
-                btn.title = '地図スタイル・地球儀切り替え';
-                btn.setAttribute('aria-label', '地図スタイル・地球儀切り替え');
+                btn.title = '地図スタイル切り替え';
+                btn.setAttribute('aria-label', '地図スタイル切り替え');
                 btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`;
 
                 const dropdown = document.createElement('div');
@@ -1234,13 +860,11 @@
                 dropdown.className = 'map-style-dropdown';
                 dropdown.style.display = 'none';
 
-                // スタイル一覧タイトル
                 const title = document.createElement('div');
                 title.className = 'map-style-dropdown-title';
                 title.textContent = '地図スタイル';
                 dropdown.appendChild(title);
 
-                // スタイル選択肢
                 Object.keys(MAP_STYLES).forEach(key => {
                     const conf = MAP_STYLES[key];
                     const item = document.createElement('button');
@@ -1262,43 +886,6 @@
                     });
                     dropdown.appendChild(item);
                 });
-
-                // 区切り線
-                const divider = document.createElement('div');
-                divider.className = 'map-style-dropdown-divider';
-                dropdown.appendChild(divider);
-
-                // 投影法（球形 / 平面）タイトル
-                const projLabel = document.createElement('div');
-                projLabel.className = 'map-style-dropdown-title';
-                projLabel.textContent = '投影法 (PROJECTION)';
-                dropdown.appendChild(projLabel);
-
-                // 投影法切り替えボタングループ
-                const projGroup = document.createElement('div');
-                projGroup.className = 'map-proj-group';
-
-                const globeBtn = document.createElement('button');
-                globeBtn.type = 'button';
-                globeBtn.className = 'map-proj-btn' + (currentProjection === 'globe' ? ' is-active' : '');
-                globeBtn.dataset.proj = 'globe';
-                globeBtn.innerHTML = `<span>🌐</span><span>球形 (Globe)</span>`;
-                globeBtn.addEventListener('click', () => {
-                    setProjection('globe');
-                });
-
-                const mercatorBtn = document.createElement('button');
-                mercatorBtn.type = 'button';
-                mercatorBtn.className = 'map-proj-btn' + (currentProjection === 'mercator' ? ' is-active' : '');
-                mercatorBtn.dataset.proj = 'mercator';
-                mercatorBtn.innerHTML = `<span>🗺️</span><span>平面 (2D)</span>`;
-                mercatorBtn.addEventListener('click', () => {
-                    setProjection('mercator');
-                });
-
-                projGroup.appendChild(globeBtn);
-                projGroup.appendChild(mercatorBtn);
-                dropdown.appendChild(projGroup);
 
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1323,19 +910,49 @@
 
                 container.appendChild(btn);
                 container.appendChild(dropdown);
-                this._container = container;
+
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+
                 return container;
             }
+        });
 
-            onRemove() {
-                if (this._container && this._container.parentNode) {
-                    this._container.parentNode.removeChild(this._container);
-                }
-                this._map = undefined;
+        // コントロールの追加（スタイル切り替え -> ズームコントロールの順）
+        map.addControl(new StyleSwitcherControl());
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // 初期スタイルの設定（URLパラメータ -> localStorage -> 'dark'）
+        (function initStyle() {
+            const params = new URLSearchParams(location.search);
+            const urlStyle = params.get('style');
+            let initialStyle = 'dark';
+            if (urlStyle && MAP_STYLES[urlStyle.toLowerCase()]) {
+                initialStyle = urlStyle.toLowerCase();
+            } else {
+                try {
+                    const saved = localStorage.getItem('ingress_map_style');
+                    if (saved && MAP_STYLES[saved]) {
+                        initialStyle = saved;
+                    }
+                } catch (e) { }
             }
-        }
+            setMapStyle(initialStyle, false);
+        })();
+        const oms = new OverlappingMarkerSpiderfier(map, {
+            keepSpiderfied: true, // 展開後、マーカーをクリックしても閉じないようにする
+            nearbyDistance: 20    // 重なっているとみなす距離（ピクセル）
+        });
 
-        map.addControl(new StyleSwitcherControl(), 'top-right');
+        // OMS経由でクリックされたときにポップアップを開く（単体・展開後マーカークリック時のみ）
+        oms.addListener('click', function (marker) {
+            if (marker.popupHtml) {
+                L.popup({ autoPan: false })
+                    .setLatLng(marker.getLatLng())
+                    .setContent(marker.popupHtml)
+                    .openOn(map);
+            }
+        });
 
         let events = [];
         let markers = [];
@@ -1525,35 +1142,37 @@
         }
 
         function clearMarkers() {
-            if (spiderfier) spiderfier.clear();
+            // マーカー削除時にOMSからも消す
+            markers.forEach(m => {
+                if (m.leaflet) {
+                    map.removeLayer(m.leaflet);
+                    oms.removeMarker(m.leaflet); // 追加
+                }
+            });
             markers = [];
+            // OMSの管理情報もクリア（念のため）
+            oms.clearMarkers();
         }
 
-        function makeMarkerElement(url, title, status = null) {
+        function makeIcon(url, title, status = null) {
             if (!url) url = 'images/ingress.png';
-            const el = document.createElement('div');
-            el.className = 'custom-div-icon';
-            el.style.width = '32px';
-            el.style.minHeight = '44px';
-            el.style.cursor = 'pointer';
-
-            const safeUrl = escapeAttr(url);
-            const safeTitle = escapeHtml(title || '');
-            let ringHtml = '';
-            if (status === 'ongoing') {
-                ringHtml = '<div class="ongoing-ring"></div>';
-            } else if (status === 'upcoming') {
-                ringHtml = '<div class="pulse-ring"></div>';
+            try {
+                const safeUrl = escapeAttr(url);
+                const safeTitle = escapeHtml(title || '');
+                let ringHtml = '';
+                if (status === 'ongoing') {
+                    ringHtml = '<div class="ongoing-ring"></div>';
+                } else if (status === 'upcoming') {
+                    ringHtml = '<div class="pulse-ring"></div>';
+                }
+                const html = `<div style="position:relative;">${ringHtml}<img src="${safeUrl}" alt="" /><div class="marker-label">${safeTitle}</div></div>`;
+                return L.divIcon({ html, className: 'custom-div-icon', iconSize: [32, 44], iconAnchor: [16, 32], popupAnchor: [0, -32] });
+            } catch (e) {
+                return null;
             }
-            el.innerHTML = `<div style="position:relative;">${ringHtml}<img src="${safeUrl}" alt="" /><div class="marker-label">${safeTitle}</div></div>`;
-            return el;
         }
 
         function render() {
-            if (!map || !map.getCanvasContainer || !map.getCanvasContainer()) {
-                map.once('load', () => render());
-                return;
-            }
             clearMarkers();
             const list = document.getElementById('list'); list.innerHTML = '';
             const q = document.getElementById('filterText').value.trim().toLowerCase();
@@ -1680,33 +1299,17 @@
                 row.appendChild(xBtn);
 
                 list.appendChild(row);
-                let mapMarker = null;
-                let markerEl = null;
-                let popupHtml = '';
+                let leafletMarker = null;
                 if (!isNaN(lat) && !isNaN(lng)) {
                     const titleText = getField(ev, 'title') || '';
-                    markerEl = makeMarkerElement(iconUrl, titleText, eventStatus);
-                    popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div style="margin-top:6px;display:flex;align-items:center;gap:12px;"><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a><a href="javascript:void(0)" onclick="window.openEventXModal(${itemIdx})" style="display:inline-flex;align-items:center;gap:4px;color:#38bdf8;text-decoration:none;"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>X検索</span></a></div></div>`;
-
-                    mapMarker = new mapboxgl.Marker({ element: markerEl, anchor: 'center', offset: [0, -16] })
-                        .setLngLat([lng, lat])
-                        .addTo(map);
-
-                    const markerItem = {
-                        marker: mapMarker,
-                        el: markerEl,
-                        lat,
-                        lng,
-                        popupHtml,
-                        data: ev,
-                        checkbox: cb
-                    };
-                    spiderfier.addMarker(markerItem);
-                    markers.push(markerItem);
-                } else {
-                    markers.push({ marker: null, el: null, lat: null, lng: null, data: ev, checkbox: cb });
+                    const icon = makeIcon(iconUrl, titleText, eventStatus);
+                    leafletMarker = L.marker([lat, lng], icon ? { icon } : {});
+                    const popupHtml = `<div><strong>${escapeHtml(getField(ev, 'title') || '')}</strong><div>${escapeHtml(formatDate(date) || dateRaw || '')}</div><div>${escapeHtml(getField(ev, 'portalname') || '')}</div><div>${escapeHtml(getField(ev, 'description') || '')}</div><div style="margin-top:6px;display:flex;align-items:center;gap:12px;"><a href="${escapeAttr(getField(ev, 'url') || getField(ev, 'URL') || '')}" target="_blank">詳細</a><a href="javascript:void(0)" onclick="window.openEventXModal(${itemIdx})" style="display:inline-flex;align-items:center;gap:4px;color:#38bdf8;text-decoration:none;"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>X検索</span></a></div></div>`;
+                    leafletMarker.popupHtml = popupHtml;
+                    map.addLayer(leafletMarker);
+                    oms.addMarker(leafletMarker); // OMSにも登録する
                 }
-
+                markers.push({ leaflet: leafletMarker, data: ev, checkbox: cb });
                 const urlParams = new URLSearchParams(location.search);
                 const pSelected = urlParams.get('selected');
                 const selectedTitles = pSelected ? pSelected.split(';').map(s => { try { return decodeURIComponent(s); } catch (e) { return s; } }) : [];
@@ -1726,14 +1329,23 @@
         }
 
         function updateMarkerVisibility() {
-            const anyChecked = markers.some(m => m.checkbox && m.checkbox.checked);
+            const anyChecked = markers.some(m => m.checkbox.checked);
             markers.forEach(m => {
-                if (m.el) {
+                if (m.leaflet) {
                     const shouldShow = anyChecked ? m.checkbox.checked : true;
-                    m.el.style.display = shouldShow ? '' : 'none';
+                    if (shouldShow) {
+                        if (!map.hasLayer(m.leaflet)) {
+                            map.addLayer(m.leaflet);
+                            oms.addMarker(m.leaflet);
+                        }
+                    } else {
+                        if (map.hasLayer(m.leaflet)) {
+                            map.removeLayer(m.leaflet);
+                            oms.removeMarker(m.leaflet);
+                        }
+                    }
                 }
             });
-            if (spiderfier) spiderfier.unspiderfy(true);
         }
 
         function syncUrlParams() {
@@ -1756,10 +1368,6 @@
                 params.set('style', currentStyleKey);
             }
 
-            if (currentProjection && currentProjection !== 'globe') {
-                params.set('proj', currentProjection);
-            }
-
             const newUrl = new URL(location.href);
             newUrl.search = params.toString();
             history.replaceState(null, '', newUrl.toString());
@@ -1768,13 +1376,18 @@
         function setAllCheckboxes(checked) {
             markers.forEach(m => {
                 try {
-                    if (m.checkbox) m.checkbox.checked = checked;
-                    if (m.el) {
-                        m.el.style.display = checked ? '' : 'none';
+                    m.checkbox.checked = checked;
+                    if (m.leaflet) {
+                        if (checked) {
+                            map.addLayer(m.leaflet);
+                            oms.addMarker(m.leaflet); // 追加
+                        } else {
+                            map.removeLayer(m.leaflet);
+                            oms.removeMarker(m.leaflet); // 追加
+                        }
                     }
                 } catch (e) { }
             });
-            if (spiderfier) spiderfier.unspiderfy(true);
         }
 
         function escapeHtml(s) { if (!s) return ''; return ('' + s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); }
@@ -1847,12 +1460,11 @@
             });
         });
 
-        const panel = document.getElementById('panel'); const collapseBtn = document.getElementById('collapseBtn'); const openPanelBtn = document.getElementById('openPanelBtn'); let collapsed = false; collapseBtn.addEventListener('click', () => { collapsed = !collapsed; panel.style.display = collapsed ? 'none' : 'flex'; openPanelBtn.style.display = collapsed ? 'block' : 'none'; setTimeout(() => { try { map.resize(); } catch (e) { } }, 200); }); openPanelBtn.addEventListener('click', () => { panel.style.display = 'flex'; collapsed = false; openPanelBtn.style.display = 'none'; setTimeout(() => { try { map.resize(); } catch (e) { } }, 200); });
+        const panel = document.getElementById('panel'); const collapseBtn = document.getElementById('collapseBtn'); const openPanelBtn = document.getElementById('openPanelBtn'); let collapsed = false; collapseBtn.addEventListener('click', () => { collapsed = !collapsed; panel.style.display = collapsed ? 'none' : 'flex'; openPanelBtn.style.display = collapsed ? 'block' : 'none'; setTimeout(() => { try { map.invalidateSize(); } catch (e) { } }, 200); }); openPanelBtn.addEventListener('click', () => { panel.style.display = 'flex'; collapsed = false; openPanelBtn.style.display = 'none'; setTimeout(() => { try { map.invalidateSize(); } catch (e) { } }, 200); });
         // check/clear removed per layout change
         loadCsv(defaultCsv);
         window.render = render; window.loadCsv = loadCsv; window.events = events; window.map = map;
         window.setMapStyle = setMapStyle; window.MAP_STYLES = MAP_STYLES;
-        window.setProjection = setProjection; window.spiderfier = spiderfier;
 
         window.openEventXModal = function(idx) {
             const it = currentVisibleItems[idx];
